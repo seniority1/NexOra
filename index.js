@@ -23,8 +23,8 @@ let welcomeEnabled = false;
 let msbot = { public: true };
 
 const userWarnings = {}; // {groupId: {userId: warnCount}}
-const OWNER_NUMBER = "923215813715@s.whatsapp.net";
-const OWNER_CONTACT = "wa.me/923215813715";
+const OWNER_NUMBER = "2349160291884@s.whatsapp.net";
+const OWNER_CONTACT = "2349160291884wa.me/";
 const OWNER_IMAGE_PATH = "./media/msbot.jpg";
 const MEME_API = "https://meme-api.com/gimme";
 
