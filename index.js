@@ -5,33 +5,50 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import P from "pino";
 import express from "express";
+import readline from "readline";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-app.get("/", (_, res) => res.send("✅ WhatsApp bot is running on panel"));
+app.get("/", (_, res) => res.send("✅ WhatsApp bot is running"));
 app.listen(PORT, () => console.log(`🌐 Web server started on port ${PORT}`));
 
-async function startBot() {
-  // ✅ Auth folder to store login session
-  const { state, saveCreds } = await useMultiFileAuthState("auth_info");
+async function askQuestion(query) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  return new Promise((resolve) =>
+    rl.question(query, (ans) => {
+      rl.close();
+      resolve(ans);
+    })
+  );
+}
 
-  // ✅ Always get latest Baileys version
+async function startBot() {
+  const { state, saveCreds } = await useMultiFileAuthState("auth_info");
   const { version } = await fetchLatestBaileysVersion();
-  console.log(`📡 Using Baileys version: ${version}`);
 
   const sock = makeWASocket({
     auth: state,
     version,
-    printQRInTerminal: true,
-    logger: P({ level: "silent" })
+    logger: P({ level: "silent" }),
+    printQRInTerminal: false
   });
 
-  // Save session when credentials update
   sock.ev.on("creds.update", saveCreds);
 
-  // Handle connection updates (login / reconnect)
-  sock.ev.on("connection.update", (update) => {
+  sock.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect } = update;
+
+    // If there are no creds yet, use pairing code login
+    if (!state.creds?.registered && !sock.authState.creds.registered) {
+      console.log("📲 No existing session found. Using pairing code login...");
+      const phoneNumber = await askQuestion("📞 Enter your WhatsApp number (e.g. 2348012345678): ");
+      const code = await sock.requestPairingCode(phoneNumber);
+      console.log(`🔐 Your pairing code: ${code}`);
+      console.log("👉 Enter this code in WhatsApp: Settings > Linked devices > Link with phone number");
+    }
 
     if (connection === "open") {
       console.log("✅ Bot connected to WhatsApp!");
@@ -43,7 +60,6 @@ async function startBot() {
     }
   });
 
-  // Handle incoming messages
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message) return;
