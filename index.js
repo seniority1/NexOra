@@ -1,28 +1,28 @@
 import makeWASocket, {
   useMultiFileAuthState,
-  DisconnectReason,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
+  DisconnectReason
 } from "@whiskeysockets/baileys";
-import P from "pino";
 import express from "express";
+import P from "pino";
+import fs from "fs";
 import readline from "readline";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-app.get("/", (_, res) => res.send("✅ WhatsApp bot is running"));
-app.listen(PORT, () => console.log(`🌐 Web server started on port ${PORT}`));
+app.get("/", (req, res) => res.send("✅ WhatsApp Bot is running"));
+app.listen(PORT, () => console.log(`🌐 Web server started on Port ${PORT}`));
 
-async function askQuestion(query) {
+// 🧠 Helper for input prompt
+function askQuestion(query) {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
-  return new Promise((resolve) =>
-    rl.question(query, (ans) => {
-      rl.close();
-      resolve(ans);
-    })
-  );
+  return new Promise(resolve => rl.question(query, ans => {
+    rl.close();
+    resolve(ans.trim());
+  }));
 }
 
 async function startBot() {
@@ -30,47 +30,42 @@ async function startBot() {
   const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
-    auth: state,
     version,
+    auth: state,
+    printQRInTerminal: false,
     logger: P({ level: "silent" }),
-    printQRInTerminal: false
   });
 
   sock.ev.on("creds.update", saveCreds);
 
-  sock.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect } = update;
-
-    // If there are no creds yet, use pairing code login
-    if (!state.creds?.registered && !sock.authState.creds.registered) {
-      console.log("📲 No existing session found. Using pairing code login...");
-      const phoneNumber = await askQuestion("📞 Enter your WhatsApp number (e.g. 2348012345678): ");
-      const code = await sock.requestPairingCode(phoneNumber);
-      console.log(`🔐 Your pairing code: ${code}`);
-      console.log("👉 Enter this code in WhatsApp: Settings > Linked devices > Link with phone number");
+  // 📌 Pairing code if no session exists
+  if (!fs.existsSync("./auth_info/creds.json")) {
+    let number = process.env.PAIRING_NUMBER;
+    if (!number) {
+      number = await askQuestion("📲 Enter your WhatsApp number with country code (e.g., 2379160291884): ");
     }
 
+    if (!/^\d+$/.test(number)) {
+      console.log("❌ Invalid number format. Only digits allowed.");
+      process.exit(1);
+    }
+
+    const code = await sock.requestPairingCode(number);
+    console.log(`🔗 Pairing Code for ${number}: ${code}`);
+    console.log("👉 Open WhatsApp → Linked Devices → Link a device → Enter this code");
+  }
+
+  sock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
     if (connection === "open") {
-      console.log("✅ Bot connected to WhatsApp!");
+      console.log("✅ BOT CONNECTED SUCCESSFULLY 🎉");
     } else if (connection === "close") {
-      const shouldReconnect =
-        lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log("⚠️ Connection closed. Reconnecting:", shouldReconnect);
-      if (shouldReconnect) startBot();
-    }
-  });
-
-  sock.ev.on("messages.upsert", async ({ messages }) => {
-    const msg = messages[0];
-    if (!msg.message) return;
-
-    const text =
-      msg.message.conversation ||
-      msg.message.extendedTextMessage?.text ||
-      "";
-
-    if (text.trim().toLowerCase() === ".ping") {
-      await sock.sendMessage(msg.key.remoteJid, { text: "🏓 Pong!" });
+      const reason = lastDisconnect?.error?.output?.statusCode;
+      if (reason !== DisconnectReason.loggedOut) {
+        console.log("⚠️ Connection closed, reconnecting...");
+        startBot();
+      } else {
+        console.log("❌ Session logged out. Please restart to pair again.");
+      }
     }
   });
 }
