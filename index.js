@@ -1,86 +1,82 @@
+// ✅ Use require() instead of import — works on Pterodactyl / CommonJS
 const {
   default: makeWASocket,
   useMultiFileAuthState,
-  makeCacheableSignalKeyStore,
+  fetchLatestBaileysVersion,
   DisconnectReason
 } = require("@whiskeysockets/baileys");
 
-const pino = require("pino");
+const express = require("express");
+const P = require("pino");
+const fs = require("fs");
 const readline = require("readline");
 
-// ✅ Simple function to ask for user input in the console
-function ask(question) {
+// 🌐 Simple web server (keeps the bot alive on panel)
+const app = express();
+const PORT = process.env.PORT || 8080;
+app.get("/", (req, res) => res.send("✅ WhatsApp Bot is running"));
+app.listen(PORT, () => console.log(`🌐 Web server started on Port ${PORT}`));
+
+// 🧠 Helper for input prompt
+function askQuestion(query) {
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout,
+    output: process.stdout
   });
-  return new Promise((resolve) => {
-    rl.question(question, (ans) => {
-      rl.close();
-      resolve(ans.trim());
-    });
-  });
+  return new Promise(resolve => rl.question(query, ans => {
+    rl.close();
+    resolve(ans.trim());
+  }));
 }
 
 async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState("./auth");
+  // 🔐 Load or create auth session
+  const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
+  const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
-    logger: pino({ level: "silent" }),
-    printQRInTerminal: false, // ❌ no QR, we'll use pairing code
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
-    },
-    browser: ["Ubuntu", "Chrome", "22.04.4"], // makes WhatsApp see it as desktop
+    version,
+    printQRInTerminal: false, // ❌ no QR
+    auth: state,
+    logger: P({ level: "silent" }),
+    browser: ["Ubuntu", "Chrome", "22.04.4"],
   });
-
-  // 🧠 First time setup → Ask for number & generate pairing code
-  if (!state.creds.registered) {
-    try {
-      const phoneNumber = await ask("📲 Enter your WhatsApp number (with country code, no +): ");
-      const code = await sock.requestPairingCode(phoneNumber);
-      console.log(`\n✅ Pairing code generated: ${code}`);
-      console.log("👉 Go to WhatsApp > Linked Devices > Link with phone number and enter this code.\n");
-    } catch (err) {
-      console.error("⚠️ Error generating pairing code:", err);
-    }
-  }
 
   sock.ev.on("creds.update", saveCreds);
 
-  sock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
-    if (connection === "close") {
-      const reason = lastDisconnect?.error?.output?.statusCode;
-      console.log("❌ Connection closed. Reason:", reason);
-      if (reason !== DisconnectReason.loggedOut) {
-        startBot();
+  // 📌 Pairing flow if no session exists
+  if (!fs.existsSync("./auth_info/creds.json")) {
+    try {
+      let number = process.env.PAIRING_NUMBER;
+      if (!number) {
+        number = await askQuestion("📲 Enter your WhatsApp number with country code (e.g., 2379160291884): ");
       }
-    } else if (connection === "open") {
-      console.log("✅ Bot connected successfully!");
+
+      if (!/^\d+$/.test(number)) {
+        console.log("❌ Invalid number format. Only digits allowed.");
+        process.exit(1);
+      }
+
+      const code = await sock.requestPairingCode(number);
+      console.log(`\n🔗 Pairing Code for ${number}: ${code}`);
+      console.log("👉 Open WhatsApp → Linked Devices → Link a device → Enter this code\n");
+    } catch (err) {
+      console.error("⚠️ Error while pairing:", err);
+      process.exit(1);
     }
-  });
+  }
 
-  // 📩 Simple .menu command for testing
-  sock.ev.on("messages.upsert", async (m) => {
-    const msg = m.messages[0];
-    if (!msg.message) return;
-    const from = msg.key.remoteJid;
-    const text =
-      msg.message.conversation ||
-      msg.message.extendedTextMessage?.text ||
-      "";
-
-    if (text === ".menu") {
-      await sock.sendMessage(from, {
-        text: `
-┏━🔥 *BOT MENU* 🔥━┓
-┣ .menu   → Show menu
-┣ .help   → Show help
-┣ .about  → About bot
-┗━━━━━━━━━━━━━━━┛
-        `,
-      });
+  sock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
+    if (connection === "open") {
+      console.log("✅ BOT CONNECTED SUCCESSFULLY 🎉");
+    } else if (connection === "close") {
+      const reason = lastDisconnect?.error?.output?.statusCode;
+      if (reason !== DisconnectReason.loggedOut) {
+        console.log("⚠️ Connection closed, reconnecting...");
+        startBot();
+      } else {
+        console.log("❌ Session logged out. Please restart to pair again.");
+      }
     }
   });
 }
