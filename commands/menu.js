@@ -1,16 +1,15 @@
-import os from "os";
 import moment from "moment";
 import prettyMs from "pretty-ms";
 
 const startTime = Date.now();
 
-export default async function menuCommand(sock, msg) {
-  const from = msg.key.remoteJid;
+export default {
+  name: "menu",
+  async execute(sock, msg) {
+    const from = msg.key.remoteJid;
+    const runtime = prettyMs(Date.now() - startTime, { compact: true });
 
-  // 🕒 Calculate bot uptime dynamically
-  const runtime = prettyMs(Date.now() - startTime, { compact: true });
-
-  const menuText = `
+    const menuText = `
 ╭━━━〔 *🤖 NoxOra Menu* 〕━━━╮
 
 👑 *Owner:*  Seniority  
@@ -107,8 +106,11 @@ export default async function menuCommand(sock, msg) {
 https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
 `;
 
-  await sock.sendMessage(from, {
-    image: { url: "https://raw.githubusercontent.com/iamedale/My-boy-asset/main/file_00000000044862438fca96d9cf92f1ca.png" }, // Replace with your custom banner
-    caption: menuText.trim(),
+    await sock.sendMessage(from, {
+      image: { url: "https://i.ibb.co/3RR9YwW/noxora-banner.jpg" },
+      caption: menuText.trim(),
+    });
+  },
+};    caption: menuText.trim(),
   });
 }
