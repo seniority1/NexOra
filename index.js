@@ -1,7 +1,7 @@
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
 } from "@whiskeysockets/baileys";
 import P from "pino";
 import readline from "readline";
@@ -9,17 +9,17 @@ import express from "express";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-app.get("/", (_, res) => res.send("✅ NoxOra WhatsApp bot running with pairing login"));
+app.get("/", (_, res) => res.send("✅ NoxOra WhatsApp bot is running with pairing login"));
 app.listen(PORT, () => console.log(`🌐 Web server started on port ${PORT}`));
 
-// helper for terminal input
-const question = (text) => new Promise((resolve) => {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  rl.question(text, (ans) => {
-    rl.close();
-    resolve(ans);
+const question = (text) =>
+  new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(text, (ans) => {
+      rl.close();
+      resolve(ans);
+    });
   });
-});
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState("auth_info");
@@ -28,11 +28,23 @@ async function startBot() {
   const sock = makeWASocket({
     version,
     logger: P({ level: "silent" }),
-    printQRInTerminal: false, // 🚫 no QR
+    printQRInTerminal: false,
     auth: state,
   });
 
   sock.ev.on("creds.update", saveCreds);
+
+  // 🔥 Generate pairing code only if not already registered
+  if (!sock.authState.creds.registered) {
+    const number = await question("📞 Enter your WhatsApp number (e.g., 2348123456789): ");
+    try {
+      console.log("⏳ Generating pairing code...");
+      const code = await sock.requestPairingCode(number.trim());
+      console.log(`📲 Pair this device by entering this code in WhatsApp: ${code}`);
+    } catch (err) {
+      console.error("❌ Error generating pairing code:", err);
+    }
+  }
 
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect } = update;
@@ -48,17 +60,10 @@ async function startBot() {
     }
   });
 
-  // 💡 ask for number and generate pairing code only on first login
-  if (!sock.authState.creds.registered) {
-    const phoneNumber = await question("📞 Enter your WhatsApp number (e.g., 2348123456789): ");
-    const code = await sock.requestPairingCode(phoneNumber);
-    console.log(`📲 Pair this device by entering this code on WhatsApp: ${code}`);
-  }
-
-  // simple test command
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message) return;
+
     const text =
       msg.message.conversation ||
       msg.message.extendedTextMessage?.text ||
