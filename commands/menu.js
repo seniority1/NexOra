@@ -1,116 +1,35 @@
-import moment from "moment";
-import prettyMs from "pretty-ms";
-
-const startTime = Date.now();
+import fs from "fs";
 
 export default {
   name: "menu",
   async execute(sock, msg) {
-    const from = msg.key.remoteJid;
-    const runtime = prettyMs(Date.now() - startTime, { compact: true });
+    const jid = msg.key.remoteJid;
 
-    const menuText = `
-╭━━━〔 *🤖 NoxOra Menu* 〕━━━╮
+    // Local image path (you can change this to your own logo)
+    const imagePath = "./media/noxora.jpg"; // ✅ make sure this file exists
 
-👑 *Owner:*  Seniority  
-⏱️ *Runtime:*  ${runtime}  
-📡 *Status:*  Online  
-⚙️ *Engine:*  Baileys  
+    // If file doesn't exist, fallback message
+    if (!fs.existsSync(imagePath)) {
+      await sock.sendMessage(jid, {
+        text: "⚠️ Menu image not found. Please add 'noxora.jpg' in the /media folder.",
+      });
+      return;
+    }
 
-╰━━━━━━━━━━━━━━━━━━━━╯
+    const caption = `
+╭━━━🔥 *NOXORA MENU* 🔥━━━╮
+┃  .ping   → Test bot speed
+┃  .menu   → Show this menu
+┃  .about  → About the bot
+┃  .ai <text> → Chat with AI (coming soon 🤖)
+╰━━━━━━━━━━━━━━━━━━━━━━╯
 
-┏━🔥 *GENERAL* 🔥━┓  
-┣ .menu  
-┣ .help  
-┣ .about  
-┣ .ping  
-┣ .time  
-┣ .owner  
-┣ .rules  
-┣ .whoami  
-┣ .fact  
-┣ .joke  
-┣ .quote  
-┣ .weather  
-┣ .news  
-┣ .wiki  
-┣ .crypto  
-┗━━━━━━━━━━━━━━  
-  
-┏━🛠️ *UTILITY* 🛠️━┓  
-┣ .define  
-┣ .translate  
-┣ .currency  
-┣ .calc  
-┣ .shorten  
-┣ .expand  
-┣ .qrcode  
-┣ .scanqr  
-┣ .remind  
-┣ .ipinfo  
-┗━━━━━━━━━━━━━━  
-  
-┏━⚡ *OWNER* ⚡━┓  
-┣ .block @user  
-┣ .unblock @user  
-┣ .private  
-┣ .public  
-┣ .leave  
-┣ .broadcast group <text>  
-┣ .broadcast all <text>  
-┣ .broadcastchat <text>  
-┣ .autoviewstat on/off  
-┣ .autotype on/off  
-┣ .autorecord on/off  
-┣ .autoreact on/off  
-┣ .autoread on/off  
-┣ .allgroups  
-┣ .allchannels  
-┗━━━━━━━━━━━━━━  
-  
-┏━👥 *GROUP (Admins)* 👥━┓  
-┣ .kick  
-┣ .add  
-┣ .promote  
-┣ .demote  
-┣ .setname  
-┣ .setdesc  
-┣ .setrules  
-┣ .clearrules  
-┣ .setppgc  
-┣ .link  
-┣ .revoke  
-┣ .tagall  
-┣ .hidetag  
-┣ .info  
-┣ .mute  
-┣ .umute  
-┣ .antilink on/off  
-┣ .antilinkdel on/off  
-┣ .antibadwords on/off  
-┣ .welcome on/off  
-┣ .goodbye on/off  
-┗━━━━━━━━━━━━━━━┛  
-  
-┏━🎉 *FUN* 🎉━┓  
-┣ .sticker  
-┣ .toimg  
-┣ .tts <lang> <text>  
-┣ .roll  
-┣ .calc <expression>  
-┣ .ai <prompt>  
-┗━━━━━━━━━━━┛  
-  
-━━━━━━━━━━━━━━  
-📌 *Join our official channel:*  
-https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
+💡 *Powered by Baileys & NoxOra Core*
 `;
 
-    await sock.sendMessage(from, {
-      image: { url: "https://i.ibb.co/3RR9YwW/noxora-banner.jpg" },
-      caption: menuText.trim(),
+    await sock.sendMessage(jid, {
+      image: { url: imagePath },
+      caption,
     });
   },
-};    caption: menuText.trim(),
-  });
-}
+};
