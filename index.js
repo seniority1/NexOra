@@ -1,71 +1,86 @@
-import makeWASocket, {
+const {
+  default: makeWASocket,
   useMultiFileAuthState,
-  fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore,
   DisconnectReason
-} from "@whiskeysockets/baileys";
-import express from "express";
-import P from "pino";
-import fs from "fs";
-import readline from "readline";
+} = require("@whiskeysockets/baileys");
 
-const app = express();
-const PORT = process.env.PORT || 8080;
-app.get("/", (req, res) => res.send("✅ WhatsApp Bot is running"));
-app.listen(PORT, () => console.log(`🌐 Web server started on Port ${PORT}`));
+const pino = require("pino");
+const readline = require("readline");
 
-// 🧠 Helper for input prompt
-function askQuestion(query) {
+// ✅ Simple function to ask for user input in the console
+function ask(question) {
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
   });
-  return new Promise(resolve => rl.question(query, ans => {
-    rl.close();
-    resolve(ans.trim());
-  }));
+  return new Promise((resolve) => {
+    rl.question(question, (ans) => {
+      rl.close();
+      resolve(ans.trim());
+    });
+  });
 }
 
 async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState("auth_info");
-  const { version } = await fetchLatestBaileysVersion();
+  const { state, saveCreds } = await useMultiFileAuthState("./auth");
 
   const sock = makeWASocket({
-    version,
-    auth: state,
-    printQRInTerminal: false,
-    logger: P({ level: "silent" }),
+    logger: pino({ level: "silent" }),
+    printQRInTerminal: false, // ❌ no QR, we'll use pairing code
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
+    },
+    browser: ["Ubuntu", "Chrome", "22.04.4"], // makes WhatsApp see it as desktop
   });
+
+  // 🧠 First time setup → Ask for number & generate pairing code
+  if (!state.creds.registered) {
+    try {
+      const phoneNumber = await ask("📲 Enter your WhatsApp number (with country code, no +): ");
+      const code = await sock.requestPairingCode(phoneNumber);
+      console.log(`\n✅ Pairing code generated: ${code}`);
+      console.log("👉 Go to WhatsApp > Linked Devices > Link with phone number and enter this code.\n");
+    } catch (err) {
+      console.error("⚠️ Error generating pairing code:", err);
+    }
+  }
 
   sock.ev.on("creds.update", saveCreds);
 
-  // 📌 Pairing code if no session exists
-  if (!fs.existsSync("./auth_info/creds.json")) {
-    let number = process.env.PAIRING_NUMBER;
-    if (!number) {
-      number = await askQuestion("📲 Enter your WhatsApp number with country code (e.g., 2379160291884): ");
-    }
-
-    if (!/^\d+$/.test(number)) {
-      console.log("❌ Invalid number format. Only digits allowed.");
-      process.exit(1);
-    }
-
-    const code = await sock.requestPairingCode(number);
-    console.log(`🔗 Pairing Code for ${number}: ${code}`);
-    console.log("👉 Open WhatsApp → Linked Devices → Link a device → Enter this code");
-  }
-
   sock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
-    if (connection === "open") {
-      console.log("✅ BOT CONNECTED SUCCESSFULLY 🎉");
-    } else if (connection === "close") {
+    if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode;
+      console.log("❌ Connection closed. Reason:", reason);
       if (reason !== DisconnectReason.loggedOut) {
-        console.log("⚠️ Connection closed, reconnecting...");
         startBot();
-      } else {
-        console.log("❌ Session logged out. Please restart to pair again.");
       }
+    } else if (connection === "open") {
+      console.log("✅ Bot connected successfully!");
+    }
+  });
+
+  // 📩 Simple .menu command for testing
+  sock.ev.on("messages.upsert", async (m) => {
+    const msg = m.messages[0];
+    if (!msg.message) return;
+    const from = msg.key.remoteJid;
+    const text =
+      msg.message.conversation ||
+      msg.message.extendedTextMessage?.text ||
+      "";
+
+    if (text === ".menu") {
+      await sock.sendMessage(from, {
+        text: `
+┏━🔥 *BOT MENU* 🔥━┓
+┣ .menu   → Show menu
+┣ .help   → Show help
+┣ .about  → About bot
+┗━━━━━━━━━━━━━━━┛
+        `,
+      });
     }
   });
 }
