@@ -10,6 +10,7 @@ function formatRuntime(ms) {
 
 export default {
   name: "menu",
+  description: "Show the bot command menu",
   async execute(sock, msg) {
     const from = msg.key.remoteJid;
     const runtime = formatRuntime(Date.now() - startTime);
@@ -109,7 +110,18 @@ export default {
 https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
 `;
 
-    await sock.sendMessage(from, {
+    await sock.sendMessage(
+      from,
+      {
+        image: {
+          url: "https://raw.githubusercontent.com/iamedale/My-boy-asset/main/file_00000000044862438fca96d9cf92f1ca.png",
+        },
+        caption: menu.trim(),
+      },
+      { quoted: msg } // 👈 this makes the bot reply to the user's message
+    );
+  },
+};    await sock.sendMessage(from, {
       image: { url: "https://raw.githubusercontent.com/iamedale/My-boy-asset/main/file_00000000044862438fca96d9cf92f1ca.png" }, // banner image
       caption: menu.trim(),
     });
