@@ -15,7 +15,7 @@ export default {
     const runtime = formatRuntime(Date.now() - startTime);
 
     const menu = `
-╭━━━〔 *🤖 NoxOra Menu* 〕━━━╮
+╭━━━〔 *🤖 NexOra Menu* 〕━━━╮
 👑 *Owner:*  Seniority  
 ⏱️ *Runtime:*  ${runtime}  
 📡 *Status:*  Online  
