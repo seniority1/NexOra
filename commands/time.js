@@ -2,33 +2,43 @@ export default {
   name: "time",
   description: "Show the current date and time",
   async execute(sock, msg) {
+    const botName = "NexOra";
+
     // 🕒 Get current date/time
     const now = new Date();
 
-    // Format time nicely (24-hour format)
+    // Format time in 24-hour format
     const hours = now.getHours().toString().padStart(2, "0");
     const minutes = now.getMinutes().toString().padStart(2, "0");
     const seconds = now.getSeconds().toString().padStart(2, "0");
 
-    const day = now.toLocaleDateString(undefined, {
+    const formattedDate = now.toLocaleDateString(undefined, {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
     });
 
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     const timeText = `
-┏━━🕒 *CURRENT TIME* 🕒━━┓
+┏━━🤖 *${botName.toUpperCase()} BOT* ━━┓
+          🕒 *CURRENT TIME* 🕒
 
-📅 *Date:* ${day}  
-⏰ *Time:* ${hours}:${minutes}:${seconds}
-
-🌍 Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}
+📅 *Date:* ${formattedDate}  
+⏰ *Time:* ${hours}:${minutes}:${seconds}  
+🌍 *Timezone:* ${timeZone}
 
 ┗━━━━━━━━━━━━━━━━━━━━┛
     `;
 
-    // 📤 Send time info
-    await sock.sendMessage(msg.key.remoteJid, { text: timeText.trim() });
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      {
+        text: timeText.trim(),
+        linkPreview: { renderLargerThumbnail: false },
+      },
+      { quoted: msg } // ✅ reply to user's message
+    );
   },
 };
