@@ -110,7 +110,7 @@ https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
 `;
 
     await sock.sendMessage(from, {
-      image: { url: "https://i.ibb.co/3RR9YwW/noxora-banner.jpg" }, // banner image
+      image: { url: "https://raw.githubusercontent.com/iamedale/My-boy-asset/main/file_00000000044862438fca96d9cf92f1ca.png" }, // banner image
       caption: menu.trim(),
     });
   },
