@@ -1,16 +1,25 @@
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
-  fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore,
+  fetchLatestBaileysVersion
 } from "@whiskeysockets/baileys";
 import P from "pino";
+import readline from "readline";
 import express from "express";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-app.get("/", (_, res) => res.send("✅ NoxOra WhatsApp bot is running with pairing login"));
+app.get("/", (_, res) => res.send("✅ NoxOra WhatsApp bot running with pairing login"));
 app.listen(PORT, () => console.log(`🌐 Web server started on port ${PORT}`));
+
+// helper for terminal input
+const question = (text) => new Promise((resolve) => {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  rl.question(text, (ans) => {
+    rl.close();
+    resolve(ans);
+  });
+});
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState("auth_info");
@@ -18,47 +27,38 @@ async function startBot() {
 
   const sock = makeWASocket({
     version,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, P({ level: "silent" })),
-    },
     logger: P({ level: "silent" }),
-    printQRInTerminal: false, // 🚫 Disable QR
+    printQRInTerminal: false, // 🚫 no QR
+    auth: state,
   });
 
   sock.ev.on("creds.update", saveCreds);
 
-  sock.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect, isNewLogin, pairingCode } = update;
+  sock.ev.on("connection.update", (update) => {
+    const { connection, lastDisconnect } = update;
 
-    if (connection === "connecting") {
-      console.log("🔄 Connecting to WhatsApp...");
-    }
+    if (connection === "connecting") console.log("🔄 Connecting to WhatsApp...");
+    if (connection === "open") console.log("✅ NoxOra connected successfully!");
 
-    if (isNewLogin) {
-      console.log("🆕 New login detected, generating pairing code...");
-      try {
-        const code = await sock.requestPairingCode("234XXXXXXXXXX"); // ☑️ Replace with your phone number (with country code, no '+')
-        console.log(`📲 Pair this number by entering the code in WhatsApp: ${code}`);
-      } catch (err) {
-        console.error("❌ Failed to generate pairing code:", err);
-      }
-    }
-
-    if (connection === "open") {
-      console.log("✅ NoxOra connected successfully!");
-    } else if (connection === "close") {
-      const shouldReconnect =
-        lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+    if (connection === "close") {
+      const reason = lastDisconnect?.error?.output?.statusCode;
+      const shouldReconnect = reason !== DisconnectReason.loggedOut;
       console.log("⚠️ Connection closed. Reconnecting:", shouldReconnect);
       if (shouldReconnect) startBot();
     }
   });
 
+  // 💡 ask for number and generate pairing code only on first login
+  if (!sock.authState.creds.registered) {
+    const phoneNumber = await question("📞 Enter your WhatsApp number (e.g., 2348123456789): ");
+    const code = await sock.requestPairingCode(phoneNumber);
+    console.log(`📲 Pair this device by entering this code on WhatsApp: ${code}`);
+  }
+
+  // simple test command
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message) return;
-
     const text =
       msg.message.conversation ||
       msg.message.extendedTextMessage?.text ||
