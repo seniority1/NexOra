@@ -1,82 +1,91 @@
-// ✅ Use require() instead of import — works on Pterodactyl / CommonJS
-const {
-  default: makeWASocket,
+import makeWASocket, {
   useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  DisconnectReason
-} = require("@whiskeysockets/baileys");
+  DisconnectReason,
+  fetchLatestBaileysVersion
+} from "@whiskeysockets/baileys";
+import P from "pino";
+import express from "express";
+import readline from "readline";
+import fs from "fs";
 
-const express = require("express");
-const P = require("pino");
-const fs = require("fs");
-const readline = require("readline");
-
-// 🌐 Simple web server (keeps the bot alive on panel)
 const app = express();
 const PORT = process.env.PORT || 8080;
-app.get("/", (req, res) => res.send("✅ WhatsApp Bot is running"));
-app.listen(PORT, () => console.log(`🌐 Web server started on Port ${PORT}`));
+app.get("/", (_, res) => res.send("✅ WhatsApp bot is running"));
+app.listen(PORT, () => console.log(`🌐 Web server started on port ${PORT}`));
 
-// 🧠 Helper for input prompt
-function askQuestion(query) {
+// 🧠 Helper to ask questions in console
+async function askQuestion(query) {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
-  return new Promise(resolve => rl.question(query, ans => {
-    rl.close();
-    resolve(ans.trim());
-  }));
+  return new Promise((resolve) =>
+    rl.question(query, (ans) => {
+      rl.close();
+      resolve(ans.trim());
+    })
+  );
 }
 
 async function startBot() {
-  // 🔐 Load or create auth session
   const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
   const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
-    version,
-    printQRInTerminal: false, // ❌ no QR
     auth: state,
+    version,
     logger: P({ level: "silent" }),
-    browser: ["Ubuntu", "Chrome", "22.04.4"],
+    printQRInTerminal: false,
+    browser: ["Baileys", "Chrome", "1.0.0"] // ✅ clean simple fingerprint
   });
 
   sock.ev.on("creds.update", saveCreds);
 
-  // 📌 Pairing flow if no session exists
+  // ✅ Pairing only once if session doesn't exist yet
   if (!fs.existsSync("./auth_info/creds.json")) {
+    console.log("📲 No existing session found. Using pairing code login...");
+    const phoneNumber = await askQuestion("📞 Enter your WhatsApp number (e.g. 2348012345678): ");
+
+    if (!/^\d+$/.test(phoneNumber)) {
+      console.log("❌ Invalid phone number. Digits only.");
+      process.exit(1);
+    }
+
     try {
-      let number = process.env.PAIRING_NUMBER;
-      if (!number) {
-        number = await askQuestion("📲 Enter your WhatsApp number with country code (e.g., 2379160291884): ");
-      }
-
-      if (!/^\d+$/.test(number)) {
-        console.log("❌ Invalid number format. Only digits allowed.");
-        process.exit(1);
-      }
-
-      const code = await sock.requestPairingCode(number);
-      console.log(`\n🔗 Pairing Code for ${number}: ${code}`);
-      console.log("👉 Open WhatsApp → Linked Devices → Link a device → Enter this code\n");
+      const code = await sock.requestPairingCode(phoneNumber);
+      console.log(`\n🔐 Your pairing code: ${code}`);
+      console.log("👉 Enter this code in WhatsApp: Settings > Linked devices > Link with phone number\n");
     } catch (err) {
-      console.error("⚠️ Error while pairing:", err);
+      console.error("⚠️ Failed to generate pairing code:", err);
       process.exit(1);
     }
   }
 
+  // 📡 Connection updates
   sock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
     if (connection === "open") {
-      console.log("✅ BOT CONNECTED SUCCESSFULLY 🎉");
+      console.log("✅ Bot connected to WhatsApp successfully!");
     } else if (connection === "close") {
-      const reason = lastDisconnect?.error?.output?.statusCode;
-      if (reason !== DisconnectReason.loggedOut) {
-        console.log("⚠️ Connection closed, reconnecting...");
-        startBot();
-      } else {
-        console.log("❌ Session logged out. Please restart to pair again.");
-      }
+      const shouldReconnect =
+        lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+      console.log("⚠️ Connection closed. Reconnecting:", shouldReconnect);
+      if (shouldReconnect) startBot();
+      else console.log("❌ Session logged out. Restart bot to pair again.");
+    }
+  });
+
+  // 📨 Simple ping command
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message) return;
+
+    const text =
+      msg.message.conversation ||
+      msg.message.extendedTextMessage?.text ||
+      "";
+
+    if (text.trim().toLowerCase() === ".ping") {
+      await sock.sendMessage(msg.key.remoteJid, { text: "🏓 Pong!" });
     }
   });
 }
