@@ -1,11 +1,26 @@
 // bot.js
+import fs from "fs";
+import path from "path";
 import makeWASocket, {
   useMultiFileAuthState,
   makeCacheableSignalKeyStore,
   DisconnectReason,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
 } from "@whiskeysockets/baileys";
 import pino from "pino";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 📦 Load all commands
+const commands = new Map();
+const commandFiles = fs.readdirSync(path.join(__dirname, "commands")).filter(f => f.endsWith(".js"));
+for (const file of commandFiles) {
+  const { default: cmd } = await import(`./commands/${file}`);
+  commands.set(cmd.name, cmd);
+}
+console.log(`✅ Loaded ${commands.size} commands.`);
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState("./auth");
@@ -24,7 +39,7 @@ async function startBot() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // 📲 Pairing code (non-interactive)
+  // Pairing code
   if (!state.creds.registered) {
     const phoneNumber = process.env.WHATSAPP_NUMBER || "2349160291884";
     console.log(`⏳ Requesting pairing code for ${phoneNumber}...`);
@@ -32,68 +47,48 @@ async function startBot() {
       try {
         const code = await sock.requestPairingCode(phoneNumber.trim());
         console.log(`✅ Pairing code: ${code}`);
-        console.log("➡️ Go to WhatsApp → Linked Devices → Link with phone number");
+        console.log("➡️ Link from WhatsApp → Linked Devices → Link with phone number");
       } catch (err) {
         console.error("⚠️ Pairing code error:", err.message);
       }
     }, 3000);
   }
 
-  // 🌐 Connection handling (note: async so we can await sendMessage)
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "open") {
       console.log("✅ NoxOra connected!");
-
-      // Notify owner (configurable)
-      const notifyNumber = process.env.NOTIFY_NUMBER || process.env.WHATSAPP_NUMBER || "2349160291884";
-      const jid = `${notifyNumber}@s.whatsapp.net`;
-
       try {
-        // safe notify — wrapped in try/catch so failure doesn't crash bot
-        await sock.sendMessage(jid, {
-          text: "🤖 *NoxOra is back online!* Running smoothly ✅"
+        await sock.sendMessage("2349160291884@s.whatsapp.net", {
+          text: "🤖 *NoxOra is back online!* Running smoothly ✅",
         });
-        console.log(`ℹ️ Sent "back online" message to ${jid}`);
-      } catch (err) {
-        console.warn("⚠️ Could not send online notification:", err.message || err);
-      }
-
+      } catch {}
     } else if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode;
       console.log("❌ Connection closed:", reason);
-      if (reason !== DisconnectReason.loggedOut) {
-        console.log("♻️ Reconnecting NoxOra...");
-        startBot();
-      } else {
-        console.log("🪪 Logged out. Delete auth folder to relink.");
-      }
+      if (reason !== DisconnectReason.loggedOut) startBot();
     }
   });
 
-  // 💓 Heartbeat — check every 2 minutes
-  setInterval(async () => {
-    try {
-      if (sock?.user) {
-        console.log("💓 Heartbeat OK — Connected as:", sock.user.id);
-      } else {
-        console.log("💔 Disconnected — Restarting bot...");
-        startBot();
-      }
-    } catch (err) {
-      console.error("⚠️ Heartbeat error:", err.message);
-      startBot();
-    }
-  }, 120000); // 2 minutes
-
-  // 💬 Basic command
+  // Command handler
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message) return;
+
     const from = msg.key.remoteJid;
     const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+    if (!text.startsWith(".")) return;
 
-    if (text === ".ping") {
-      await sock.sendMessage(from, { text: "🏓 Pong! NoxOra is alive ⚡" });
+    const args = text.trim().slice(1).split(/ +/);
+    const commandName = args.shift().toLowerCase();
+
+    const command = commands.get(commandName);
+    if (command) {
+      try {
+        await command.execute(sock, msg, args);
+      } catch (err) {
+        console.error("❌ Command error:", err);
+        await sock.sendMessage(from, { text: "⚠️ Command error occurred." });
+      }
     }
   });
 }
