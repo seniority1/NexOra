@@ -1,15 +1,15 @@
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore,
 } from "@whiskeysockets/baileys";
 import P from "pino";
 import express from "express";
-import qrcode from "qrcode-terminal";  // ✅ New
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-app.get("/", (_, res) => res.send("✅ WhatsApp bot is running"));
+app.get("/", (_, res) => res.send("✅ NoxOra WhatsApp bot is running with pairing login"));
 app.listen(PORT, () => console.log(`🌐 Web server started on port ${PORT}`));
 
 async function startBot() {
@@ -17,23 +17,36 @@ async function startBot() {
   const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
-    auth: state,
     version,
-    logger: P({ level: "silent" })
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, P({ level: "silent" })),
+    },
+    logger: P({ level: "silent" }),
+    printQRInTerminal: false, // 🚫 Disable QR
   });
 
   sock.ev.on("creds.update", saveCreds);
 
-  sock.ev.on("connection.update", (update) => {
-    const { connection, qr, lastDisconnect } = update;
+  sock.ev.on("connection.update", async (update) => {
+    const { connection, lastDisconnect, isNewLogin, pairingCode } = update;
 
-    if (qr) {
-      console.log("📱 Scan the QR code below:");
-      qrcode.generate(qr, { small: true }); // ✅ Manually show QR in terminal
+    if (connection === "connecting") {
+      console.log("🔄 Connecting to WhatsApp...");
+    }
+
+    if (isNewLogin) {
+      console.log("🆕 New login detected, generating pairing code...");
+      try {
+        const code = await sock.requestPairingCode("234XXXXXXXXXX"); // ☑️ Replace with your phone number (with country code, no '+')
+        console.log(`📲 Pair this number by entering the code in WhatsApp: ${code}`);
+      } catch (err) {
+        console.error("❌ Failed to generate pairing code:", err);
+      }
     }
 
     if (connection === "open") {
-      console.log("✅ Bot connected to WhatsApp!");
+      console.log("✅ NoxOra connected successfully!");
     } else if (connection === "close") {
       const shouldReconnect =
         lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -52,7 +65,7 @@ async function startBot() {
       "";
 
     if (text.trim().toLowerCase() === ".ping") {
-      await sock.sendMessage(msg.key.remoteJid, { text: "🏓 Pong!" });
+      await sock.sendMessage(msg.key.remoteJid, { text: "🏓 Pong! NoxOra is alive." });
     }
   });
 }
