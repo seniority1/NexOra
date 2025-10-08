@@ -1,24 +1,17 @@
 {
-  "name": "nexora",
+  "name": "NexOra",
   "version": "1.0.0",
-  "description": "🤖 NexOra — A powerful multi-purpose WhatsApp bot built using Baileys.",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "sudo apt update && sudo apt install ffmpeg -y && bash start.sh"
+    "start": "bash start.sh",
+    "postinstall": "sudo apt-get update && sudo apt-get install -y ffmpeg"
   },
-  "author": "Seniority",
-  "license": "MIT",
-  "keywords": [
-    "whatsapp-bot",
-    "nexora",
-    "baileys",
-    "chatbot",
-    "nodejs"
-  ],
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.4",
     "express": "^4.19.2",
-    "pino": "^8.17.0"
+    "pino": "^8.17.0",
+    "axios": "^1.6.8",
+    "google-tts-api": "^2.0.2"
   }
 }
