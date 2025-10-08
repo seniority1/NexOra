@@ -9,11 +9,12 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import pino from "pino";
 import { fileURLToPath } from "url";
+import { handleCommand } from "./commandHandler.js"; // ✅ Import the central handler
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 📦 Load all commands
+// 📦 Load all commands (just for console info)
 const commands = new Map();
 const commandFiles = fs.readdirSync(path.join(__dirname, "commands")).filter(f => f.endsWith(".js"));
 for (const file of commandFiles) {
@@ -39,7 +40,7 @@ async function startBot() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // Pairing code
+  // 🔹 Auto pairing code on first start
   if (!state.creds.registered) {
     const phoneNumber = process.env.WHATSAPP_NUMBER || "2349160291884";
     console.log(`⏳ Requesting pairing code for ${phoneNumber}...`);
@@ -54,6 +55,7 @@ async function startBot() {
     }, 3000);
   }
 
+  // 🔄 Connection events
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "open") {
       console.log("✅ NoxOra connected!");
@@ -65,31 +67,24 @@ async function startBot() {
     } else if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode;
       console.log("❌ Connection closed:", reason);
-      if (reason !== DisconnectReason.loggedOut) startBot();
+      if (reason !== DisconnectReason.loggedOut) startBot(); // Auto restart
     }
   });
 
-  // Command handler
+  // 💬 Message handler (now using global command handler)
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message) return;
 
-    const from = msg.key.remoteJid;
-    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
-    if (!text.startsWith(".")) return;
+    // Handle text or caption
+    const body =
+      msg.message.conversation ||
+      msg.message.extendedTextMessage?.text ||
+      msg.message.imageMessage?.caption ||
+      "";
 
-    const args = text.trim().slice(1).split(/ +/);
-    const commandName = args.shift().toLowerCase();
-
-    const command = commands.get(commandName);
-    if (command) {
-      try {
-        await command.execute(sock, msg, args);
-      } catch (err) {
-        console.error("❌ Command error:", err);
-        await sock.sendMessage(from, { text: "⚠️ Command error occurred." });
-      }
-    }
+    // Forward to the central handler
+    await handleCommand(sock, msg, body);
   });
 }
 
