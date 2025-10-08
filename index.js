@@ -1,3 +1,4 @@
+// bot.js
 import fs from "fs";
 import path from "path";
 import makeWASocket, {
@@ -12,18 +13,14 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load commands
+// 📦 Load all commands
 const commands = new Map();
-
-async function loadCommands() {
-  const cmdPath = path.join(__dirname, "commands");
-  const commandFiles = fs.readdirSync(cmdPath).filter(f => f.endsWith(".js"));
-  for (const file of commandFiles) {
-    const { default: cmd } = await import(`./commands/${file}`);
-    commands.set(cmd.name, cmd);
-  }
-  console.log(`✅ Loaded ${commands.size} commands.`);
+const commandFiles = fs.readdirSync(path.join(__dirname, "commands")).filter(f => f.endsWith(".js"));
+for (const file of commandFiles) {
+  const { default: cmd } = await import(`./commands/${file}`);
+  commands.set(cmd.name, cmd);
 }
+console.log(`✅ Loaded ${commands.size} commands.`);
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState("./auth");
@@ -50,7 +47,7 @@ async function startBot() {
       try {
         const code = await sock.requestPairingCode(phoneNumber.trim());
         console.log(`✅ Pairing code: ${code}`);
-        console.log("➡️ Open WhatsApp → Linked Devices → Link with phone number");
+        console.log("➡️ Link from WhatsApp → Linked Devices → Link with phone number");
       } catch (err) {
         console.error("⚠️ Pairing code error:", err.message);
       }
@@ -68,10 +65,7 @@ async function startBot() {
     } else if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode;
       console.log("❌ Connection closed:", reason);
-      if (reason !== DisconnectReason.loggedOut) {
-        console.log("♻️ Reconnecting...");
-        setTimeout(startBot, 5000);
-      }
+      if (reason !== DisconnectReason.loggedOut) startBot();
     }
   });
 
@@ -81,13 +75,7 @@ async function startBot() {
     if (!msg.message) return;
 
     const from = msg.key.remoteJid;
-    const text =
-      msg.message.conversation ||
-      msg.message.extendedTextMessage?.text ||
-      msg.message.imageMessage?.caption ||
-      msg.message.videoMessage?.caption ||
-      "";
-
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
     if (!text.startsWith(".")) return;
 
     const args = text.trim().slice(1).split(/ +/);
@@ -105,6 +93,4 @@ async function startBot() {
   });
 }
 
-// Boot
-await loadCommands();
-await startBot();
+startBot();
