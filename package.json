@@ -4,14 +4,17 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "bash start.sh",
-    "postinstall": "sudo apt-get update && sudo apt-get install -y ffmpeg"
+    "start": "node index.js",
+    "postinstall": "apt-get update -y && apt-get install -y --no-install-recommends ffmpeg && npm install --legacy-peer-deps"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.4",
-    "express": "^4.19.2",
-    "pino": "^8.17.0",
     "axios": "^1.6.8",
-    "google-tts-api": "^2.0.2"
+    "express": "^4.19.2",
+    "google-tts-api": "^2.0.2",
+    "jimp": "^1.6.0",
+    "jsqr": "^1.4.0",
+    "pino": "^8.17.0",
+    "qrcode": "^1.5.3"
   }
 }
