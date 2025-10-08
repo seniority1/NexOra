@@ -1,42 +1,67 @@
+import Jimp from "jimp";
 import jsQR from "jsqr";
+import { downloadMediaMessage } from "@whiskeysockets/baileys";
 
 export default {
   name: "scanqr",
-  description: "Scan a QR code from an image",
+  description: "🔍 Scan a QR code from an image and return its content",
   async execute(sock, msg) {
-    const from = msg.key.remoteJid;
     const botName = "NexOra";
 
-    if (!msg.message.imageMessage) {
-      return sock.sendMessage(from, { text: "📷 Reply to an *image containing a QR code* with `.scanqr`" }, { quoted: msg });
+    // 📎 Check if message has image or quoted image
+    const message = msg.message?.imageMessage
+      ? msg
+      : msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage
+      ? {
+          message: {
+            imageMessage:
+              msg.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage,
+          },
+          key: msg.key,
+        }
+      : null;
+
+    if (!message) {
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: "📸 *Send or reply to an image containing a QR code* to scan it.",
+      }, { quoted: msg });
+      return;
     }
 
     try {
-      const buffer = await sock.downloadMediaMessage(msg);
-      const image = await import("jimp").then(m => m.default.read(buffer));
-      const qr = jsQR(
-        new Uint8ClampedArray(image.bitmap.data),
-        image.bitmap.width,
-        image.bitmap.height
-      );
+      // 🧠 Download image buffer using the helper function
+      const buffer = await downloadMediaMessage(message, "buffer", {});
 
-      if (!qr) {
-        return sock.sendMessage(from, { text: "⚠️ No QR code found in this image." }, { quoted: msg });
-      }
+      // 🧩 Read the image with Jimp
+      const image = await Jimp.read(buffer);
+      const { width, height, data } = image.bitmap;
+      const imageData = new Uint8ClampedArray(data);
 
-      const reply = `
+      // 🕵️ Decode the QR code
+      const code = jsQR(imageData, width, height);
+
+      if (code) {
+        const qrText = code.data;
+        const resultText = `
 ┏━━🤖 *${botName.toUpperCase()} BOT* ━━┓
-         📷 *QR SCANNER* 📷
+📌 *QR CODE SCANNED* 📌
 
-✅ *Decoded Text:*  
-${qr.data}
+${qrText}
 
 ┗━━━━━━━━━━━━━━━━━━━━┛
-      `;
+        `;
 
-      await sock.sendMessage(from, { text: reply.trim() }, { quoted: msg });
-    } catch (err) {
-      await sock.sendMessage(from, { text: "⚠️ Failed to scan QR code." }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { text: resultText.trim() }, { quoted: msg });
+      } else {
+        await sock.sendMessage(msg.key.remoteJid, {
+          text: "❌ *No QR code found in the image.*\nMake sure it's clear and not blurry.",
+        }, { quoted: msg });
+      }
+    } catch (error) {
+      console.error("❌ Error scanning QR:", error);
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: "⚠️ An error occurred while scanning the QR code.",
+      }, { quoted: msg });
     }
   },
 };
