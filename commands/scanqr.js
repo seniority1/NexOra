@@ -1,4 +1,4 @@
-import Jimp from "jimp";
+import { Jimp } from "jimp"; // ✅ correct for Node.js v22 (ESM)
 import jsQR from "jsqr";
 import { downloadMediaMessage } from "@whiskeysockets/baileys";
 
