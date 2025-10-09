@@ -16,97 +16,106 @@ export default {
     const runtime = formatRuntime(Date.now() - startTime);
 
     const menu = `
-╭━━━〔 *🤖 NexOra Menu* 〕━━━╮
-👑 *Owner:*  Seniority  
-⏱️ *Runtime:*  ${runtime}  
-📡 *Status:*  Online  
-⚙️ *Engine:*  Baileys  
-╰━━━━━━━━━━━━━━━━━━━━╯
+╔══════════════════════════╗
+║ 🤖  *NexOra Bot Menu*  ║
+╠══════════════════════════╣
+║ 👑 Owner: Seniority
+║ ⏱ Runtime: ${runtime}
+║ 📡 Status: Online
+║ ⚙ Engine: Baileys
+╚══════════════════════════╝
 
-┏━🔥 *GENERAL* 🔥━┓  
-┣ .menu  
-┣ .help  
-┣ .about  
-┣ .ping  
-┣ .time  
-┣ .owner  
-┣ .rules  
-┣ .whoami  
-┣ .fact  
-┣ .joke  
-┣ .quote  
-┣ .weather  
-┣ .news  
-┣ .wiki  
-┣ .crypto  
-┗━━━━━━━━━━━━━━  
-  
-┏━🛠️ *UTILITY* 🛠️━┓  
-┣ .define  
-┣ .translate  
-┣ .currency  
-┣ .calc  
-┣ .shorten  
-┣ .expand  
-┣ .qrcode  
-┣ .scanqr  
-┣ .remind  
-┣ .ipinfo  
-┗━━━━━━━━━━━━━━  
-  
-┏━⚡ *OWNER* ⚡━┓  
-┣ .block @user  
-┣ .unblock @user  
-┣ .private  
-┣ .public  
-┣ .leave  
-┣ .broadcast group <text>  
-┣ .broadcast all <text>  
-┣ .broadcastchat <text>  
-┣ .autoviewstat on/off  
-┣ .autotype on/off  
-┣ .autorecord on/off  
-┣ .autoreact on/off  
-┣ .autoread on/off  
-┣ .allgroups  
-┣ .allchannels  
-┗━━━━━━━━━━━━━━  
-  
-┏━👥 *GROUP (Admins)* 👥━┓  
-┣ .kick  
-┣ .add  
-┣ .promote  
-┣ .demote  
-┣ .setname  
-┣ .setdesc  
-┣ .setrules  
-┣ .clearrules  
-┣ .setppgc  
-┣ .link  
-┣ .revoke  
-┣ .tagall  
-┣ .hidetag  
-┣ .info  
-┣ .mute  
-┣ .umute  
-┣ .antilink on/off  
-┣ .antilinkdel on/off  
-┣ .antibadwords on/off  
-┣ .welcome on/off  
-┣ .goodbye on/off  
-┗━━━━━━━━━━━━━━━┛  
-  
-┏━🎉 *FUN* 🎉━┓  
-┣ .sticker  
-┣ .toimg  
-┣ .tts <lang> <text>  
-┣ .roll  
-┣ .calc <expression>  
-┣ .ai <prompt>  
-┗━━━━━━━━━━━┛  
-  
-━━━━━━━━━━━━━━  
-📌 *Join our official channel:*  
+💥 *GENERAL* 💥
+┌─────────────────────────┐
+│ 💬 ⌁ .menu ⌁
+│ 📘 ⌁ .help ⌁
+│ ℹ️ ⌁ .about ⌁
+│ 📶 ⌁ .ping ⌁
+│ ⏰ ⌁ .time ⌁
+│ 👤 ⌁ .owner ⌁
+│ 📜 ⌁ .rules ⌁
+│ 🧍 ⌁ .whoami ⌁
+│ 💡 ⌁ .fact ⌁
+│ 😂 ⌁ .joke ⌁
+│ 🧠 ⌁ .quote ⌁
+│ ☁️ ⌁ .weather ⌁
+│ 📰 ⌁ .news ⌁
+│ 🌐 ⌁ .wiki ⌁
+│ 💰 ⌁ .crypto ⌁
+└─────────────────────────┘
+
+🛠️ *UTILITY* 🛠️
+┌─────────────────────────┐
+│ 📝 ⌁ .define ⌁
+│ 🌍 ⌁ .translate ⌁
+│ 💱 ⌁ .currency ⌁
+│ 🧮 ⌁ .calc ⌁
+│ 🔗 ⌁ .shorten ⌁
+│ 🔍 ⌁ .expand ⌁
+│ 📷 ⌁ .qrcode ⌁
+│ 🧾 ⌁ .scanqr ⌁
+│ ⏰ ⌁ .remind ⌁
+│ 🛰️ ⌁ .ipinfo ⌁
+└─────────────────────────┘
+
+⚡ *OWNER* ⚡
+┌─────────────────────────┐
+│ 🚫 ⌁ .block @user ⌁
+│ ✅ ⌁ .unblock @user ⌁
+│ 🧾 ⌁ .blockedlist ⌁
+│ ♻️ ⌁ .restart ⌁
+│ 🔌 ⌁ .shutdown ⌁
+│ 🔒 ⌁ .private ⌁
+│ 🌐 ⌁ .public ⌁
+│ 👋 ⌁ .leave ⌁
+│ 📢 ⌁ .broadcast group <text> ⌁
+│ 📣 ⌁ .broadcast all <text> ⌁
+│ 💬 ⌁ .broadcastchat <text> ⌁
+│ 👀 ⌁ .autoviewstat on/off ⌁
+│ ✍️ ⌁ .autotype on/off ⌁
+│ 🎙️ ⌁ .autorecord on/off ⌁
+│ ❤️ ⌁ .autoreact on/off ⌁
+│ 📖 ⌁ .autoread on/off ⌁
+│ 📂 ⌁ .allgroups ⌁
+│ 📡 ⌁ .allchannels ⌁
+└─────────────────────────┘
+
+👥 *GROUP (ADMINS)* 👥
+┌─────────────────────────┐
+│ 🦵 ⌁ .kick ⌁
+│ ➕ ⌁ .add ⌁
+│ ⬆️ ⌁ .promote ⌁
+│ ⬇️ ⌁ .demote ⌁
+│ 🏷️ ⌁ .setname ⌁
+│ 📝 ⌁ .setdesc ⌁
+│ 📜 ⌁ .setrules ⌁
+│ 🧹 ⌁ .clearrules ⌁
+│ 🖼️ ⌁ .setppgc ⌁
+│ 🔗 ⌁ .link ⌁
+│ ♻️ ⌁ .revoke ⌁
+│ 📣 ⌁ .tagall ⌁
+│ 👻 ⌁ .hidetag ⌁
+│ ℹ️ ⌁ .info ⌁
+│ 🔇 ⌁ .mute ⌁
+│ 🔊 ⌁ .umute ⌁
+│ ⛔ ⌁ .antilink on/off ⌁
+│ 🚫 ⌁ .antilinkdel on/off ⌁
+│ ❌ ⌁ .antibadwords on/off ⌁
+│ 🛡️ ⌁ .welcome on/off ⌁
+│ 👋 ⌁ .goodbye on/off ⌁
+└─────────────────────────┘
+
+🎉 *FUN* 🎉
+┌─────────────────────────┐
+│ 🖼️ ⌁ .sticker ⌁
+│ 🖼️ ⌁ .toimg ⌁
+│ 🗣️ ⌁ .tts <lang> <text> ⌁
+│ 🎲 ⌁ .roll ⌁
+│ 🧮 ⌁ .calc <expression> ⌁
+│ 🤖 ⌁ .ai <prompt> ⌁
+└─────────────────────────┘
+
+📌 *Official Channel:*  
 https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
 `;
 
@@ -118,7 +127,7 @@ https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
         },
         caption: menu.trim(),
       },
-      { quoted: msg } // 👈 this makes the bot reply to the user's message
+      { quoted: msg }
     );
   },
 };
