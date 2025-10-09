@@ -10,6 +10,10 @@ import makeWASocket, {
 import pino from "pino";
 import { fileURLToPath } from "url";
 
+// 🧠 Import owner & mode utilities
+import { getMode } from "./utils/getMode.js";
+import { isOwner } from "./utils/isOwner.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -39,7 +43,7 @@ async function startBot() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // Pairing code
+  // Pairing code (for first-time setup)
   if (!state.creds.registered) {
     const phoneNumber = process.env.WHATSAPP_NUMBER || "2349160291884";
     console.log(`⏳ Requesting pairing code for ${phoneNumber}...`);
@@ -54,6 +58,7 @@ async function startBot() {
     }, 3000);
   }
 
+  // Handle connection updates
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "open") {
       console.log("✅ NoxOra connected!");
@@ -69,12 +74,13 @@ async function startBot() {
     }
   });
 
-  // Command handler
+  // 🧩 Command handler
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message) return;
 
     const from = msg.key.remoteJid;
+    const sender = msg.key.participant || msg.key.remoteJid;
     const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
     if (!text.startsWith(".")) return;
 
@@ -82,13 +88,25 @@ async function startBot() {
     const commandName = args.shift().toLowerCase();
 
     const command = commands.get(commandName);
-    if (command) {
-      try {
-        await command.execute(sock, msg, args);
-      } catch (err) {
-        console.error("❌ Command error:", err);
-        await sock.sendMessage(from, { text: "⚠️ Command error occurred." });
+    if (!command) return;
+
+    try {
+      // 🔒 Check bot mode (private/public)
+      const mode = getMode();
+      if (mode === "private" && !isOwner(sender)) {
+        await sock.sendMessage(
+          from,
+          { text: "🔒 *Bot is in PRIVATE MODE* — only owners can use commands." },
+          { quoted: msg }
+        );
+        return;
       }
+
+      // ✅ Execute the command
+      await command.execute(sock, msg, args);
+    } catch (err) {
+      console.error("❌ Command error:", err);
+      await sock.sendMessage(from, { text: "⚠️ Command error occurred." });
     }
   });
 }
