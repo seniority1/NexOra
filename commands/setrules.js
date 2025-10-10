@@ -1,42 +1,52 @@
-import { isAdmin } from "../utils/isAdmin.js";
 import fs from "fs";
 
 const RULES_FILE = "./data/group_rules.json";
-
-// 📌 Ensure rules file exists
-if (!fs.existsSync(RULES_FILE)) {
-  fs.writeFileSync(RULES_FILE, JSON.stringify({}));
-}
 
 export default {
   name: "setrules",
   description: "Set group rules (Admin only)",
   async execute(sock, msg, args) {
     const from = msg.key.remoteJid;
-    const sender = msg.key.participant || msg.key.remoteJid;
 
-    // ✅ Group only
+    // ✅ Check group
     if (!from.endsWith("@g.us")) {
       return sock.sendMessage(from, { text: "⚠️ This command only works in groups." }, { quoted: msg });
     }
 
-    // ✅ Admin only
-    if (!(await isAdmin(sock, from, sender))) {
-      return sock.sendMessage(from, { text: "❌ Only *group admins* can set rules." }, { quoted: msg });
+    // ✅ Check admin
+    const groupMetadata = await sock.groupMetadata(from);
+    const participant = groupMetadata.participants.find(p => p.id === (msg.key.participant || from));
+    if (!participant || (participant.admin !== "admin" && participant.admin !== "superadmin")) {
+      return sock.sendMessage(from, { text: "❌ Only group admins can set rules." }, { quoted: msg });
     }
 
+    // 📝 Check rules text
     const rulesText = args.join(" ").trim();
     if (!rulesText) {
-      return sock.sendMessage(from, { text: "⚠️ Usage: `.setrules <group rules>`" }, { quoted: msg });
+      return sock.sendMessage(from, { text: "⚠️ Usage: `.setrules <rules text>`" }, { quoted: msg });
     }
 
-    // 📝 Save rules
-    const rulesData = JSON.parse(fs.readFileSync(RULES_FILE));
+    // 📁 Ensure rules file exists
+    if (!fs.existsSync("./data")) fs.mkdirSync("./data", { recursive: true });
+    let rulesData = {};
+    if (fs.existsSync(RULES_FILE)) {
+      rulesData = JSON.parse(fs.readFileSync(RULES_FILE));
+    }
+
+    // 💾 Save rules
     rulesData[from] = rulesText;
     fs.writeFileSync(RULES_FILE, JSON.stringify(rulesData, null, 2));
 
-    await sock.sendMessage(from, {
-      text: "✅ Group rules have been *updated* successfully.",
-    }, { quoted: msg });
+    // ✅ Confirmation + Preview
+    const reply = `
+┏━━✅ *GROUP RULES UPDATED* ✅━━┓
+
+📜 *New Rules:*
+${rulesText}
+
+┗━━━━━━━━━━━━━━━━━━━━┛
+    `;
+
+    await sock.sendMessage(from, { text: reply.trim() }, { quoted: msg });
   },
 };
