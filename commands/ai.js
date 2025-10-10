@@ -1,6 +1,6 @@
 export default {
   name: "ai",
-  description: "Chat with NexOra's AI assistant",
+  description: "Chat with NexOra's AI assistant (DuckDuckGo + Wikipedia fallback)",
   async execute(sock, msg, args) {
     const from = msg.key.remoteJid;
     const botName = "NexOra";
@@ -11,18 +11,34 @@ export default {
     }
 
     try {
-      // ⚡ Using a free fallback API (DuckDuckGo AI Search)
-      const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(prompt)}&format=json&no_redirect=1`);
-      const data = await res.json();
+      // 🦆 1) Try DuckDuckGo Instant Answer API
+      const duckRes = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(prompt)}&format=json&no_redirect=1`);
+      const duckData = await duckRes.json();
 
       let answer =
-        data.AbstractText ||
-        data.Answer ||
-        "I couldn’t find a perfect answer, but I'm still learning! 🤖✨";
+        duckData.AbstractText ||
+        duckData.Answer ||
+        "";
+
+      // 📚 2) If DuckDuckGo gave nothing → try Wikipedia summary API
+      if (!answer) {
+        const wikiRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(prompt)}`);
+        if (wikiRes.ok) {
+          const wikiData = await wikiRes.json();
+          if (wikiData.extract) {
+            answer = wikiData.extract;
+          }
+        }
+      }
+
+      // 😅 3) If both fail → default fallback message
+      if (!answer) {
+        answer = "I couldn’t find a perfect answer, but I'm still learning! 🤖✨";
+      }
 
       const reply = `
 ┏━━🤖 *${botName.toUpperCase()} BOT* ━━┓
-            🧠 *AI ASSISTANT* 🧠
+         🧠 *AI ASSISTANT* 🧠
 
 💬 *Prompt:* ${prompt}
 
@@ -33,8 +49,10 @@ ${answer}
       `;
 
       await sock.sendMessage(from, { text: reply.trim() }, { quoted: msg });
+
     } catch (err) {
-      await sock.sendMessage(from, { text: "⚠️ AI request failed." }, { quoted: msg });
+      console.error("❌ AI command error:", err);
+      await sock.sendMessage(from, { text: "⚠️ AI request failed. Please try again later." }, { quoted: msg });
     }
   },
 };
