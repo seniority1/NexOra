@@ -27,95 +27,95 @@ export default {
 
 💥 *GENERAL* 💥
 ┌─────────────────────────┐
-│ 💬 ⌁ .menu ⌁
-│ 📘 ⌁ .help ⌁
-│ ℹ️ ⌁ .about ⌁
-│ 📶 ⌁ .ping ⌁
-│ ⏰ ⌁ .time ⌁
-│ 👤 ⌁ .owner ⌁
-│ 📜 ⌁ .rules ⌁
-│ 🧍 ⌁ .whoami ⌁
-│ 💡 ⌁ .fact ⌁
-│ 😂 ⌁ .joke ⌁
-│ 🧠 ⌁ .quote ⌁
-│ ☁️ ⌁ .weather ⌁
-│ 📰 ⌁ .news ⌁
-│ 🌐 ⌁ .wiki ⌁
-│ 💰 ⌁ .crypto ⌁
+│ 💬 .menu
+│ 📘 .help
+│ ℹ️ .about
+│ 📶 .ping
+│ ⏰ .time
+│ 👤 .owner
+│ 📜 .rules
+│ 🧍 .whoami
+│ 💡 .fact
+│ 😂 .joke
+│ 🧠 .quote
+│ ☁️ .weather
+│ 📰 .news
+│ 🌐 .wiki
+│ 💰 .crypto
 └─────────────────────────┘
 
 🛠️ *UTILITY* 🛠️
 ┌─────────────────────────┐
-│ 📝 ⌁ .define ⌁
-│ 🌍 ⌁ .translate ⌁
-│ 💱 ⌁ .currency ⌁
-│ 🧮 ⌁ .calc ⌁
-│ 🔗 ⌁ .shorten ⌁
-│ 🔍 ⌁ .expand ⌁
-│ 📷 ⌁ .qrcode ⌁
-│ 🧾 ⌁ .scanqr ⌁
-│ ⏰ ⌁ .remind ⌁
-│ 🛰️ ⌁ .ipinfo ⌁
+│ 📝 .define
+│ 🌍 .translate
+│ 💱 .currency
+│ 🧮 .calc
+│ 🔗 .shorten
+│ 🔍 .expand
+│ 📷 .qrcode
+│ 🧾 .scanqr
+│ ⏰ .remind
+│ 🛰️ .ipinfo
 └─────────────────────────┘
 
 ⚡ *OWNER* ⚡
 ┌─────────────────────────┐
-│ 🚫 ⌁ .block @user ⌁
-│ ✅ ⌁ .unblock @user ⌁
-│ 🧾 ⌁ .blockedlist ⌁
-│ ♻️ ⌁ .restart ⌁
-│ 🔌 ⌁ .shutdown ⌁
-│ 🔒 ⌁ .private ⌁
-│ 🌐 ⌁ .public ⌁
-│ 👋 ⌁ .leave ⌁
-│ 📢 ⌁ .broadcast group <text> ⌁
-│ 📣 ⌁ .broadcast all <text> ⌁
-│ 💬 ⌁ .broadcastchat <text> ⌁
-│ 👀 ⌁ .autoviewstat on/off ⌁
-│ ✍️ ⌁ .autotype on/off ⌁
-│ 🎙️ ⌁ .autorecord on/off ⌁
-│ ❤️ ⌁ .autoreact on/off ⌁
-│ 📖 ⌁ .autoread on/off ⌁
-│ 📂 ⌁ .allgroups ⌁
-│ 📡 ⌁ .allchannels ⌁
+│ 🚫 .block @user
+│ ✅ .unblock @user
+│ 🧾 .blockedlist
+│ ♻️ .restart
+│ 🔌 .shutdown
+│ 🔒 .private
+│ 🌐 .public
+│ 👋 .leave
+│ 📢 .broadcast group <text>
+│ 📣 .broadcast all <text>
+│ 💬 .broadcastchat <text>
+│ 👀 .autoviewstat on/off
+│ ✍️ .autotype on/off
+│ 🎙️ .autorecord on/off
+│ ❤️ .autoreact on/off
+│ 📖 .autoread on/off
+│ 📂 .allgroups
+│ 📡 .allchannels
 └─────────────────────────┘
 
 👥 *GROUP (ADMINS)* 👥
 ┌─────────────────────────┐
-│ 🦵 ⌁ .kick ⌁
-│ ➕ ⌁ .add ⌁
-│ ⬆️ ⌁ .promote ⌁
-│ ⬇️ ⌁ .demote ⌁
-│ 🏷️ ⌁ .setname ⌁
-│ 📝 ⌁ .setdesc ⌁
-│ 📜 ⌁ .setrules ⌁
-│ 🧹 ⌁ .clearrules ⌁
-│ 🖼️ ⌁ .setppgc ⌁
-│ 🔗 ⌁ .link ⌁
-│ ♻️ ⌁ .revoke ⌁
-│ 📣 ⌁ .tagall ⌁
-│ 👻 ⌁ .hidetag ⌁
-│ ℹ️ ⌁ .info ⌁
-│ 🔇 ⌁ .mute ⌁
-│ 🔊 ⌁ .umute ⌁
-│ ⛔ ⌁ .antilink on/off ⌁
-│ 🚫 ⌁ .antilinkdel on/off ⌁
-│ ❌ ⌁ .antibadwords on/off ⌁
-│ 🛡️ ⌁ .welcome on/off ⌁
-│ 👋 ⌁ .goodbye on/off ⌁
+│ 🦵 .kick
+│ ➕ .add
+│ ⬆️ .promote
+│ ⬇️ .demote
+│ 🏷️ .setname
+│ 📝 .setdesc
+│ 📜 .setrules
+│ 🧹 .clearrules
+│ 🖼️ .setppgc
+│ 🔗 .link
+│ ♻️ .revoke
+│ 📣 .tagall
+│ 👻 .hidetag
+│ ℹ️ .info
+│ 🔇 .mute
+│ 🔊 .umute
+│ ⛔ .antilink on/off
+│ 🚫 .antilinkdel on/off
+│ ❌ .antibadwords on/off
+│ 🛡️ .welcome on/off
+│ 👋 .goodbye on/off
 └─────────────────────────┘
 
 🎉 *FUN* 🎉
 ┌─────────────────────────┐
-│ 🖼️ ⌁ .sticker ⌁
-│ 🖼️ ⌁ .toimg ⌁
-│ 🗣️ ⌁ .tts <lang> <text> ⌁
-│ 🎲 ⌁ .roll ⌁
-│ 🧮 ⌁ .calc <expression> ⌁
-│ 🤖 ⌁ .ai <prompt> ⌁
+│ 🖼️ .sticker
+│ 🖼️ .toimg
+│ 🗣️ .tts <lang> <text>
+│ 🎲 .roll
+│ 🧮 .calc <expression>
+│ 🤖 .ai <prompt>
 └─────────────────────────┘
 
-📌 *Official Channel:*  
+📌 *Channel:*  
 https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
 `;
 
