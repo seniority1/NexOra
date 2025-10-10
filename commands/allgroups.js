@@ -1,41 +1,39 @@
-import { isOwner } from "../utils/isOwner.js";
-
 export default {
   name: "allgroups",
-  description: "List all groups the bot is in (Owner only)",
-  async execute(sock, msg, args) {
+  description: "📋 List all groups where the bot is a member (metadata-based)",
+  async execute(sock, msg) {
     const from = msg.key.remoteJid;
-    const sender = msg.key.participant || msg.key.remoteJid;
-
-    // ✅ Owner check
-    if (!isOwner(sender)) {
-      return sock.sendMessage(from, { text: "❌ Only owner can use this command!" }, { quoted: msg });
-    }
+    const botName = "NexOra";
 
     try {
-      // ✅ Fetch all chats
-      const chats = await sock.fetchChats();
-      const groups = chats.filter(c => c.id.endsWith("@g.us"));
+      // 📌 Fetch all group metadata directly
+      const groupsMetadata = await sock.groupFetchAllParticipating();
+      const groups = Object.values(groupsMetadata);
 
-      if (!groups || groups.length === 0) {
-        return sock.sendMessage(from, { text: "⚠️ The bot is not in any groups." }, { quoted: msg });
+      if (groups.length === 0) {
+        return sock.sendMessage(from, { text: "🤖 I'm not in any groups yet." }, { quoted: msg });
       }
 
-      // ✅ Format the list
-      const groupList = groups
-        .map((g, i) => `${i + 1}. ${g.name || "Unnamed Group"}\n   ID: ${g.id}`)
-        .join("\n\n");
+      // 📝 Format group list
+      let groupListText = `
+┏━━🤖 *${botName.toUpperCase()} BOT* ━━┓
+       📋 *ALL GROUPS LIST* 📋
 
-      const message = `
-📜 *All Groups (${groups.length})*
+Total Groups: ${groups.length}
 
-${groupList}
-      `.trim();
+${groups
+  .map(
+    (g, i) =>
+      `*${i + 1}.* ${g.subject || "Unnamed Group"}\n🆔 ${g.id}\n👥 Members: ${g.participants.length}`
+  )
+  .join("\n\n")}
+┗━━━━━━━━━━━━━━━━━━━━┛
+      `;
 
-      await sock.sendMessage(from, { text: message }, { quoted: msg });
+      await sock.sendMessage(from, { text: groupListText.trim() }, { quoted: msg });
     } catch (err) {
-      console.error("Allgroups error:", err);
-      await sock.sendMessage(from, { text: "⚠️ Failed to fetch groups." }, { quoted: msg });
+      console.error("❌ allgroups error:", err);
+      await sock.sendMessage(from, { text: "⚠️ Failed to fetch group list." }, { quoted: msg });
     }
   },
 };
