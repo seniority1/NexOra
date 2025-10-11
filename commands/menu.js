@@ -34,7 +34,6 @@ export default {
 │ ⏰ .time
 │ 👤 .owner
 │ 📜 .rules
-│ 🧍 .whoami
 │ 💡 .fact
 │ 😂 .joke
 │ 🧠 .quote
@@ -42,6 +41,7 @@ export default {
 │ 📰 .news
 │ 🌐 .wiki
 │ 💰 .crypto
+│ 🎥 .vv
 └─────────────────────────┘
 
 🛠️ *UTILITY* 🛠️
@@ -95,6 +95,7 @@ export default {
 │ ♻️ .revoke
 │ 📣 .tagall
 │ 👻 .hidetag
+│ 🧾 .listonline
 │ ℹ️ .info
 │ 🔇 .mute
 │ 🔊 .umute
@@ -111,7 +112,6 @@ export default {
 │ 🖼️ .toimg
 │ 🗣️ .tts <lang> <text>
 │ 🎲 .roll
-│ 🧮 .calc <expression>
 │ 🤖 .ai <prompt>
 └─────────────────────────┘
 
