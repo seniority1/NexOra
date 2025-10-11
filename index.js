@@ -9,11 +9,12 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import pino from "pino";
 import { fileURLToPath } from "url";
+import { isFeatureOn } from "./utils/settings.js"; // ✅ Import at top
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 📦 Load all commands
+// 📦 Load commands
 const commands = new Map();
 const commandFiles = fs.readdirSync(path.join(__dirname, "commands")).filter(f => f.endsWith(".js"));
 
@@ -29,7 +30,6 @@ async function loadCommands() {
   console.log(`✅ Loaded ${commands.size} commands.`);
 }
 
-// 🟢 Start the bot
 async function startBot() {
   await loadCommands();
 
@@ -79,7 +79,106 @@ async function startBot() {
     }
   });
 
-  // Command handler
+  // 🚫 Bad words list
+  const badWords = ["fuck", "bitch", "asshole", "nigga", "bastard", "shit", "pussy"];
+
+  // 🧠 Group message middleware
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message || msg.key.fromMe) return;
+
+    const from = msg.key.remoteJid;
+    const sender = msg.key.participant || msg.key.remoteJid;
+
+    if (!from.endsWith("@g.us")) return;
+
+    const textMsg =
+      msg.message.conversation ||
+      msg.message.extendedTextMessage?.text ||
+      msg.message.imageMessage?.caption ||
+      msg.message.videoMessage?.caption ||
+      "";
+
+    // 🚨 Anti-link delete
+    if (isFeatureOn(from, "antilinkdel")) {
+      const urlRegex = /(https?:\/\/[^\s]+)/gi;
+      if (urlRegex.test(textMsg)) {
+        try {
+          await sock.sendMessage(from, {
+            delete: {
+              remoteJid: from,
+              fromMe: false,
+              id: msg.key.id,
+              participant: sender,
+            },
+          });
+        } catch (err) {
+          console.error("❌ Failed to delete link message:", err);
+        }
+      }
+    }
+
+    // 🚨 Anti-link kick
+    if (isFeatureOn(from, "antilinkkick")) {
+      const urlRegex = /(https?:\/\/[^\s]+)/gi;
+      if (urlRegex.test(textMsg)) {
+        try {
+          await sock.groupParticipantsUpdate(from, [sender], "remove");
+          await sock.sendMessage(from, {
+            text: `🚫 Link detected! @${sender.split("@")[0]} has been *removed* from the group.`,
+            mentions: [sender],
+          });
+        } catch (err) {
+          console.error("❌ Failed to kick user:", err);
+        }
+      }
+    }
+
+    // 🚨 Anti-badwords
+    if (isFeatureOn(from, "antibadwords")) {
+      const lowerText = textMsg.toLowerCase();
+      if (badWords.some(word => lowerText.includes(word))) {
+        try {
+          await sock.sendMessage(from, {
+            delete: {
+              remoteJid: from,
+              fromMe: false,
+              id: msg.key.id,
+              participant: sender,
+            },
+          });
+
+          await sock.sendMessage(from, {
+            text: `🚫 Bad language is *not allowed*! @${sender.split("@")[0]} message was deleted.`,
+            mentions: [sender],
+          });
+        } catch (err) {
+          console.error("❌ Failed to delete badword message:", err);
+        }
+      }
+    }
+  });
+
+  // 👋 Welcome & Goodbye
+  sock.ev.on("group-participants.update", async (update) => {
+    const { id, participants, action } = update;
+    for (const participant of participants) {
+      if (action === "add" && isFeatureOn(id, "welcome")) {
+        await sock.sendMessage(id, {
+          text: `👋 Welcome @${participant.split("@")[0]}!`,
+          mentions: [participant],
+        });
+      }
+      if (action === "remove" && isFeatureOn(id, "goodbye")) {
+        await sock.sendMessage(id, {
+          text: `👋 Goodbye @${participant.split("@")[0]}! We’ll miss you 😢`,
+          mentions: [participant],
+        });
+      }
+    }
+  });
+
+  // 🧠 Command handler
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message) return;
