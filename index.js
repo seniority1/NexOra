@@ -9,7 +9,8 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import pino from "pino";
 import { fileURLToPath } from "url";
-import { isFeatureOn } from "./utils/settings.js"; // ✅ Import at top
+import { isFeatureOn } from "./utils/settings.js";
+import { isAdmin } from "./utils/isAdmin.js"; // ✅ Import admin check
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -89,7 +90,6 @@ async function startBot() {
 
     const from = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
-
     if (!from.endsWith("@g.us")) return;
 
     const textMsg =
@@ -99,10 +99,13 @@ async function startBot() {
       msg.message.videoMessage?.caption ||
       "";
 
-    // 🚨 Anti-link delete
+    // ✅ Check if sender is admin (used for bypass)
+    const senderIsAdmin = await isAdmin(sock, from, sender);
+
+    // 🚨 1️⃣ Anti-Link Delete
     if (isFeatureOn(from, "antilinkdel")) {
       const urlRegex = /(https?:\/\/[^\s]+)/gi;
-      if (urlRegex.test(textMsg)) {
+      if (urlRegex.test(textMsg) && !senderIsAdmin) {
         try {
           await sock.sendMessage(from, {
             delete: {
@@ -111,6 +114,10 @@ async function startBot() {
               id: msg.key.id,
               participant: sender,
             },
+          });
+          await sock.sendMessage(from, {
+            text: `🚫 Link detected and *deleted*! @${sender.split("@")[0]}`,
+            mentions: [sender],
           });
         } catch (err) {
           console.error("❌ Failed to delete link message:", err);
@@ -118,26 +125,37 @@ async function startBot() {
       }
     }
 
-    // 🚨 Anti-link kick
+    // 🚨 2️⃣ Anti-Link Kick (Delete first → then kick)
     if (isFeatureOn(from, "antilinkkick")) {
       const urlRegex = /(https?:\/\/[^\s]+)/gi;
-      if (urlRegex.test(textMsg)) {
+      if (urlRegex.test(textMsg) && !senderIsAdmin) {
         try {
+          // 🧹 Delete the message first
+          await sock.sendMessage(from, {
+            delete: {
+              remoteJid: from,
+              fromMe: false,
+              id: msg.key.id,
+              participant: sender,
+            },
+          });
+
+          // 👢 Kick the sender
           await sock.groupParticipantsUpdate(from, [sender], "remove");
           await sock.sendMessage(from, {
             text: `🚫 Link detected! @${sender.split("@")[0]} has been *removed* from the group.`,
             mentions: [sender],
           });
         } catch (err) {
-          console.error("❌ Failed to kick user:", err);
+          console.error("❌ Failed to delete and kick:", err);
         }
       }
     }
 
-    // 🚨 Anti-badwords
+    // 🚨 3️⃣ Anti-Badwords (Admin Bypass)
     if (isFeatureOn(from, "antibadwords")) {
       const lowerText = textMsg.toLowerCase();
-      if (badWords.some(word => lowerText.includes(word))) {
+      if (badWords.some(word => lowerText.includes(word)) && !senderIsAdmin) {
         try {
           await sock.sendMessage(from, {
             delete: {
@@ -149,7 +167,7 @@ async function startBot() {
           });
 
           await sock.sendMessage(from, {
-            text: `🚫 Bad language is *not allowed*! @${sender.split("@")[0]} message was deleted.`,
+            text: `🚫 Bad language is *not allowed*! @${sender.split("@")[0]}'s message was deleted.`,
             mentions: [sender],
           });
         } catch (err) {
