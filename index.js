@@ -11,6 +11,7 @@ import pino from "pino";
 import { fileURLToPath } from "url";
 import { isFeatureOn } from "./utils/settings.js";
 import { isAdmin } from "./utils/isAdmin.js"; // ✅ Import admin check
+import { autoBotConfig } from "./utils/autobot.js";  // ✅ This was missing
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -196,6 +197,69 @@ async function startBot() {
     }
   });
 
+    // 🤖 Auto Typing / Auto Recording / Auto Read / Auto React
+sock.ev.on("messages.upsert", async ({ messages }) => {
+  const msg = messages[0];
+  if (!msg.message) return;
+  const from = msg.key.remoteJid;
+
+  if (autoBotConfig.autoTyping) {
+    await sock.sendPresenceUpdate("composing", from);
+  }
+
+  if (autoBotConfig.autoRecording) {
+    await sock.sendPresenceUpdate("recording", from);
+  }
+
+  if (autoBotConfig.autoRead) {
+    await sock.readMessages([msg.key]);
+  }
+
+  if (autoBotConfig.autoReact && !msg.key.fromMe) {
+    const emojis = ["🔥", "😂", "🤖", "😎", "✅", "💯"];
+    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+    await sock.sendMessage(from, {
+      react: { text: randomEmoji, key: msg.key },
+    });
+  }
+});
+
+// 👁️ Auto View Status (bulk)
+sock.ev.on("chats.update", async (updates) => {
+  if (!autoBotConfig.autoViewStatus) return;
+
+  for (const chat of updates) {
+    if (chat.id?.endsWith("@status")) {
+      try {
+        const statusJid = chat.id;
+        const messages = await sock.fetchStatus(statusJid);
+        if (messages && messages.length > 0) {
+          for (const status of messages) {
+            await sock.readMessages([{ ...status.key }]);
+          }
+          console.log(`👁️ Auto-viewed ${messages.length} status updates from ${statusJid}`);
+        }
+      } catch (err) {
+        console.error("❌ AutoViewStatus error:", err);
+      }
+    }
+  }
+});
+
+// 👁️ Auto View Status (real-time)
+sock.ev.on("messages.upsert", async ({ messages }) => {
+  const msg = messages[0];
+  if (!msg || !msg.key) return;
+
+  if (autoBotConfig.autoViewStatus && msg.key.remoteJid === "status@broadcast") {
+    try {
+      await sock.readMessages([msg.key]);
+      console.log(`👁️ Auto-viewed a status from ${msg.key.participant}`);
+    } catch (err) {
+      console.error("❌ Failed to auto-view status:", err);
+    }
+  }
+});
   // 🧠 Command handler
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
