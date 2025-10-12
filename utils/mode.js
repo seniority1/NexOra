@@ -1,4 +1,3 @@
-// utils/mode.js
 import fs from "fs";
 
 const modeFile = "./data/mode.json";
