@@ -12,6 +12,8 @@ import { fileURLToPath } from "url";
 import { isFeatureOn } from "./utils/settings.js";
 import { isAdmin } from "./utils/isAdmin.js"; // ✅ Import admin check
 import { autoBotConfig } from "./utils/autobot.js";  // ✅ This was missing
+import { getMode, isOwner } from "./utils/settings.js";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
