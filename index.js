@@ -12,6 +12,8 @@ import { fileURLToPath } from "url";
 import { isFeatureOn } from "./utils/settings.js";
 import { isAdmin } from "./utils/isAdmin.js"; // ✅ Import admin check
 import { autoBotConfig } from "./utils/autobot.js";  // ✅ This was missing
+import { getMode, isOwner } from "./utils/settings.js";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,18 +55,19 @@ async function startBot() {
 
   // Pairing code
   if (!state.creds.registered) {
-    const phoneNumber = process.env.WHATSAPP_NUMBER || "2349160291884";
-    console.log(`⏳ Requesting pairing code for ${phoneNumber}...`);
-    setTimeout(async () => {
-      try {
-        const code = await sock.requestPairingCode(phoneNumber.trim());
-        console.log(`✅ Pairing code: ${code}`);
-        console.log("➡️ Link from WhatsApp → Linked Devices → Link with phone number");
-      } catch (err) {
-        console.error("⚠️ Pairing code error:", err.message);
-      }
-    }, 3000);
+ const ownerNumber = process.env.OWNER_NUMBER || "2349160291884";
+const ownerJid = `${ownerNumber}@s.whatsapp.net`;
+
+console.log(`⏳ Requesting pairing code for ${ownerNumber}...`);
+setTimeout(async () => {
+  try {
+    const code = await sock.requestPairingCode(ownerNumber.trim());
+    console.log(`✅ Pairing code: ${code}`);
+    console.log("➡️ Link from WhatsApp → Linked Devices → Link with phone number");
+  } catch (err) {
+    console.error("⚠️ Pairing code error:", err.message);
   }
+}, 3000);
 
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "open") {
@@ -105,8 +108,8 @@ async function startBot() {
 
     // 🚨 1️⃣ Anti-Link Delete
     if (isFeatureOn(from, "antilinkdel")) {
-      const urlRegex = /(https?:\/\/[^\s]+)/gi;
-      if (urlRegex.test(textMsg) && !senderIsAdmin) {
+    const urlRegex = /(https?:\/\/|www\.|t\.me\/|wa\.me\/)[^\s]+/gi;
+   if (urlRegex.test(textMsg) && !senderIsAdmin) {
         try {
           await sock.sendMessage(from, {
             delete: {
