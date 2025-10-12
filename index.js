@@ -272,6 +272,12 @@ sock.ev.on("messages.upsert", async ({ messages }) => {
     const args = text.trim().slice(1).split(/ +/);
     const commandName = args.shift().toLowerCase();
 
+   const mode = getMode();
+if (mode === "private" && !isOwner(sender)) {
+  return; // Ignore non-owner commands in private mode
+}
+
+
     const command = commands.get(commandName);
     if (command) {
       try {
