@@ -105,7 +105,7 @@ async function startBot() {
 
     // 🚨 1️⃣ Anti-Link Delete
     if (isFeatureOn(from, "antilinkdel")) {
-      const urlRegex = /(https?:\/\/[^\s]+)/gi;
+      const urlRegex = /(https?:\/\/|www\.|t\.me\/|wa\.me\/)[^\s]+/gi;
       if (urlRegex.test(textMsg) && !senderIsAdmin) {
         try {
           await sock.sendMessage(from, {
@@ -128,7 +128,7 @@ async function startBot() {
 
     // 🚨 2️⃣ Anti-Link Kick (Delete first → then kick)
     if (isFeatureOn(from, "antilinkkick")) {
-      const urlRegex = /(https?:\/\/[^\s]+)/gi;
+      const urlRegex = /(https?:\/\/|www\.|t\.me\/|wa\.me\/)[^\s]+/gi;
       if (urlRegex.test(textMsg) && !senderIsAdmin) {
         try {
           // 🧹 Delete the message first
