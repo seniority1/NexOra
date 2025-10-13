@@ -1,54 +1,44 @@
-import ytdl from "ytdl-core-exec";
-import axios from "axios";
+import { exec } from "child_process";
 import fs from "fs";
+import path from "path";
 
 export default {
   name: "play",
-  description: "Play and download YouTube music by name",
+  description: "🎶 Play songs from YouTube by searching keywords",
   async execute(sock, msg, args) {
+    const from = msg.key.remoteJid;
     const query = args.join(" ");
+
     if (!query) {
-      await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Please provide a song name." });
-      return;
+      return sock.sendMessage(from, { text: "⚠️ Please provide a song name.\n\nExample: *.play Davido Funds*" }, { quoted: msg });
     }
 
-    try {
-      // 🔍 Search for the song on YouTube using the API
-      const searchUrl = `https://ytsearch.guru/api/v1/search?query=${encodeURIComponent(query)}`;
-      const res = await axios.get(searchUrl);
-      const video = res.data.results[0];
+    const tempFile = path.join(process.cwd(), `song_${Date.now()}.mp3`);
 
-      if (!video || !video.url) {
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ No results found on YouTube." });
-        return;
+    await sock.sendMessage(from, { text: `🔍 Searching and downloading *${query}*...` }, { quoted: msg });
+
+    // 🎧 Download with yt-dlp (best audio)
+    const cmd = `yt-dlp -x --audio-format mp3 -o "${tempFile}" "ytsearch1:${query}"`;
+
+    exec(cmd, async (error, stdout, stderr) => {
+      if (error) {
+        console.error("❌ yt-dlp error:", error);
+        return sock.sendMessage(from, { text: "❌ Failed to download the audio." }, { quoted: msg });
       }
 
-      const url = video.url;
-      const title = video.title || "Unknown Song";
-      const file = `./temp/${title.replace(/[^\w\s]/gi, "_")}.mp3`;
+      // ✅ Send the audio file
+      try {
+        await sock.sendMessage(from, {
+          audio: { url: tempFile },
+          mimetype: "audio/mpeg",
+          ptt: false, // set true to send as voice note
+        }, { quoted: msg });
 
-      // 🎧 Download audio
-      const stream = ytdl(url, { filter: "audioonly", quality: "highestaudio" });
-      await new Promise((resolve, reject) => {
-        stream.pipe(fs.createWriteStream(file))
-          .on("finish", resolve)
-          .on("error", reject);
-      });
-
-      // 🎶 Send audio with NexOra branding
-      await sock.sendMessage(msg.key.remoteJid, {
-        audio: { url: file },
-        mimetype: "audio/mpeg",
-        fileName: `${title}.mp3`,
-        caption: `🎵 *${title}*\n\n✨━━━『 *Powered by NexOra* 』━━━✨`
-      });
-
-      fs.unlinkSync(file);
-    } catch (err) {
-      console.error("❌ Play command error:", err.message);
-      await sock.sendMessage(msg.key.remoteJid, {
-        text: "❌ Failed to play or download the song. Try again later."
-      });
-    }
+        fs.unlinkSync(tempFile); // clean up
+      } catch (err) {
+        console.error("❌ Error sending audio:", err);
+        sock.sendMessage(from, { text: "⚠️ Error sending the file." }, { quoted: msg });
+      }
+    });
   }
 };
