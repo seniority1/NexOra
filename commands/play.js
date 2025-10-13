@@ -1,44 +1,54 @@
-import { exec } from "child_process";
 import fs from "fs";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 import path from "path";
+import ytdlp from "yt-dlp-exec";
 
 export default {
   name: "play",
-  description: "🎶 Play songs from YouTube by searching keywords",
+  description: "🎶 Play or download YouTube audio by search query",
   async execute(sock, msg, args) {
     const from = msg.key.remoteJid;
     const query = args.join(" ");
 
     if (!query) {
-      return sock.sendMessage(from, { text: "⚠️ Please provide a song name.\n\nExample: *.play Davido Funds*" }, { quoted: msg });
+      await sock.sendMessage(from, { text: "⚠️ Please provide a song name or YouTube link.\n\nExample: `.play Davido Feel`" });
+      return;
     }
 
-    const tempFile = path.join(process.cwd(), `song_${Date.now()}.mp3`);
+    // 📁 Build temporary file path
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const outputFile = path.join(__dirname, `../temp-${Date.now()}.mp3`);
 
-    await sock.sendMessage(from, { text: `🔍 Searching and downloading *${query}*...` }, { quoted: msg });
+    await sock.sendMessage(from, { text: `🔎 Searching & downloading: *${query}* ...` });
 
-    // 🎧 Download with yt-dlp (best audio)
-    const cmd = `yt-dlp -x --audio-format mp3 -o "${tempFile}" "ytsearch1:${query}"`;
+    try {
+      // 🧠 Use yt-dlp to search and download first result as mp3
+      await ytdlp(`ytsearch1:${query}`, {
+        extractAudio: true,
+        audioFormat: "mp3",
+        output: outputFile,
+        quiet: true,
+      });
 
-    exec(cmd, async (error, stdout, stderr) => {
-      if (error) {
-        console.error("❌ yt-dlp error:", error);
-        return sock.sendMessage(from, { text: "❌ Failed to download the audio." }, { quoted: msg });
+      // ✅ Send audio file
+      const audioBuffer = fs.readFileSync(outputFile);
+      await sock.sendMessage(from, {
+        audio: audioBuffer,
+        mimetype: "audio/mp4",
+        ptt: false, // set true if you want it as voice note
+        fileName: `${query}.mp3`,
+      });
+
+    } catch (err) {
+      console.error("❌ .play error:", err);
+      await sock.sendMessage(from, { text: "❌ Failed to download audio. Try another keyword." });
+    } finally {
+      // 🧹 Clean up temp file
+      if (fs.existsSync(outputFile)) {
+        fs.unlinkSync(outputFile);
       }
-
-      // ✅ Send the audio file
-      try {
-        await sock.sendMessage(from, {
-          audio: { url: tempFile },
-          mimetype: "audio/mpeg",
-          ptt: false, // set true to send as voice note
-        }, { quoted: msg });
-
-        fs.unlinkSync(tempFile); // clean up
-      } catch (err) {
-        console.error("❌ Error sending audio:", err);
-        sock.sendMessage(from, { text: "⚠️ Error sending the file." }, { quoted: msg });
-      }
-    });
-  }
+    }
+  },
 };
