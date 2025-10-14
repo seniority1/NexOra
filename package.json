@@ -1,21 +1,20 @@
 {
-"name": "NexOra",
-"version": "1.0.0",
-"main": "index.js",
-"type": "module",
-"scripts": {
-"start": "node index.js",
-"postinstall": "apt-get update -y && apt-get install -y --no-install-recommends ffmpeg && npm install --legacy-peer-deps"
-},
-"dependencies": {
-"@whiskeysockets/baileys": "^6.7.4",
-"axios": "^1.6.8",
-"express": "^4.19.2",
-"google-tts-api": "^2.0.2",
-"jimp": "^1.6.0",
-"jsqr": "^1.4.0",
-"pino": "^8.17.0",
-"qrcode": "^1.5.3"
+  "name": "NexOra",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "postinstall": "apt-get update -y && apt-get install -y --no-install-recommends ffmpeg curl && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp && npm install --legacy-peer-deps"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.4",
+    "axios": "^1.6.8",
+    "express": "^4.19.2",
+    "google-tts-api": "^2.0.2",
+    "jimp": "^1.6.0",
+    "jsqr": "^1.4.0",
+    "pino": "^8.17.0",
+    "qrcode": "^1.5.3"
+  }
 }
-}
-
