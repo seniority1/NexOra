@@ -12,10 +12,9 @@
     "axios": "^1.6.8",
     "express": "^4.19.2",
     "google-tts-api": "^2.0.2",
-    "jimp": "^1.6.0",
+    "jimp": "^0.22.10",
     "jsqr": "^1.4.0",
     "pino": "^8.17.0",
     "qrcode": "^1.5.3"
-    "ytdl-core-exec": "^1.3.5"
   }
 }
