@@ -1,7 +1,7 @@
 import { isAdmin } from "../utils/isAdmin.js";
 
 // 📝 In-memory storage (replace with DB for persistence)
-const bannedUsers = {}; 
+export const bannedUsers = {}; 
 // Structure: bannedUsers[groupId][userId] = { until: timestamp, reason }
 
 export default {
@@ -105,4 +105,4 @@ function formatDuration(ms) {
   if (m < 60) return `${m} minute(s)`;
   const h = Math.floor(m / 60);
   return `${h} hour(s)`;
-}x
+}
