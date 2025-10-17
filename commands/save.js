@@ -1,50 +1,88 @@
+import { downloadMediaMessage } from "@whiskeysockets/baileys";
+
 export default {
   name: "save",
-  description: "Save any message (text, media, etc.) privately to your DM",
+  description: "Save any message/media privately to your DM",
   async execute(sock, msg) {
     const from = msg.key.remoteJid;
     const userJid = msg.key.participant || msg.key.remoteJid;
-
-    // ✅ Identify the message being saved (reply or mention)
-    const quoted = msg.message?.extendedTextMessage?.contextInfo;
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
     if (!quoted) {
-      return sock.sendMessage(from, { text: "⚠️ Reply to the message you want to *save*." }, { quoted: msg });
+      return sock.sendMessage(from, {
+        text: "💾 Reply to *any message or media* with `.save` to save it privately.",
+      }, { quoted: msg });
     }
 
-    const quotedMsgKey = {
-      remoteJid: from,
-      id: quoted.stanzaId,
-      participant: quoted.participant || from,
-    };
-
     try {
-      // 📨 Load the full quoted message
-      const savedMsg = await sock.loadMessage(quotedMsgKey.remoteJid, quotedMsgKey.id);
-
-      if (!savedMsg) {
-        return sock.sendMessage(from, { text: "❌ Failed to fetch the quoted message." }, { quoted: msg });
+      // 📝 Text message
+      if (quoted.conversation || quoted.extendedTextMessage?.text) {
+        const text = quoted.conversation || quoted.extendedTextMessage?.text;
+        await sock.sendMessage(userJid, { text: `💾 *Saved Message:*\n\n${text}` });
+        return;
       }
 
-      // 🏷️ Build header text for context
-      const groupInfo = from.endsWith("@g.us") ? await sock.groupMetadata(from) : null;
-      const groupName = groupInfo ? groupInfo.subject : "Private Chat";
-      const time = new Date().toLocaleString();
+      // 🖼️ Image
+      if (quoted.imageMessage) {
+        const buffer = await downloadMediaMessage({ message: { imageMessage: quoted.imageMessage } }, "buffer", {});
+        await sock.sendMessage(userJid, { image: buffer, caption: "💾 Saved Image" });
+        return;
+      }
 
-      const header = `💾 *Saved Message*\n👥 From: ${groupName}\n🕒 ${time}\n\n`;
+      // 🎥 Video
+      if (quoted.videoMessage) {
+        const buffer = await downloadMediaMessage({ message: { videoMessage: quoted.videoMessage } }, "buffer", {});
+        await sock.sendMessage(userJid, { video: buffer, caption: "💾 Saved Video" });
+        return;
+      }
 
-      // 📨 Forward or copy message to user's DM silently
-      await sock.sendMessage(userJid, { text: header });
+      // 🔊 Audio / Voice
+      if (quoted.audioMessage) {
+        const buffer = await downloadMediaMessage({ message: { audioMessage: quoted.audioMessage } }, "buffer", {});
+        const mimetype = quoted.audioMessage.mimetype || "audio/ogg; codecs=opus";
+        const isPtt = !!quoted.audioMessage.ptt;
+        await sock.sendMessage(userJid, { audio: buffer, mimetype, ptt: isPtt });
+        return;
+      }
 
-      await sock.sendMessage(userJid, {
-        forward: quotedMsgKey,
-      });
+      // 📄 Document
+      if (quoted.documentMessage) {
+        const buffer = await downloadMediaMessage({ message: { documentMessage: quoted.documentMessage } }, "buffer", {});
+        const fileName = quoted.documentMessage.fileName || "saved_file";
+        const mimetype = quoted.documentMessage.mimetype || "application/octet-stream";
+        await sock.sendMessage(userJid, { document: buffer, fileName, mimetype, caption: "💾 Saved Document" });
+        return;
+      }
 
-      // ✨ Optional silent confirmation in group (can be skipped if you want it 100% silent)
-      // await sock.sendMessage(from, { text: "✅ Message saved to your DM." }, { quoted: msg });
+      // 🧠 Sticker
+      if (quoted.stickerMessage) {
+        const buffer = await downloadMediaMessage({ message: { stickerMessage: quoted.stickerMessage } }, "buffer", {});
+        await sock.sendMessage(userJid, { sticker: buffer });
+        return;
+      }
+
+      // 👁️ View Once Messages
+      if (quoted.viewOnceMessageV2 || quoted.viewOnceMessage) {
+        const viewOnceMsg = quoted.viewOnceMessageV2 || quoted.viewOnceMessage;
+        const inner = viewOnceMsg.message;
+
+        if (inner?.imageMessage) {
+          const buffer = await downloadMediaMessage({ message: viewOnceMsg }, "buffer", {});
+          await sock.sendMessage(userJid, { image: buffer, caption: "💾 Saved View-Once Image" });
+          return;
+        }
+        if (inner?.videoMessage) {
+          const buffer = await downloadMediaMessage({ message: viewOnceMsg }, "buffer", {});
+          await sock.sendMessage(userJid, { video: buffer, caption: "💾 Saved View-Once Video" });
+          return;
+        }
+      }
+
+      // 🌀 Nothing matched
+      await sock.sendMessage(from, { text: "⚠️ Unsupported message type. Can't save this." }, { quoted: msg });
 
     } catch (err) {
-      console.error("Save command error:", err);
+      console.error("❌ SAVE command error:", err);
       await sock.sendMessage(from, { text: "❌ Failed to save the message." }, { quoted: msg });
     }
   },
