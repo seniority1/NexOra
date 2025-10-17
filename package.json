@@ -5,14 +5,14 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "postinstall": "apt-get update -y && apt-get install -y --no-install-recommends ffmpeg && npm install --legacy-peer-deps"
+    "postinstall": "apt-get update -y && apt-get install -y --no-install-recommends ffmpeg curl && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/bin/yt-dlp && chmod a+rx /usr/bin/yt-dlp && npm install --legacy-peer-deps"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.4",
     "axios": "^1.6.8",
     "express": "^4.19.2",
     "google-tts-api": "^2.0.2",
-    "jimp": "^0.22.10",
+    "jimp": "^1.6.0",
     "jsqr": "^1.4.0",
     "pino": "^8.17.0",
     "qrcode": "^1.5.3"
