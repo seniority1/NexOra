@@ -1,65 +1,74 @@
-import fs from "fs";
+import { downloadMediaMessage } from "@whiskeysockets/baileys";
 
 export default {
   name: "vv2",
-  description: "Download a view-once image/video/audio and send it privately",
+  description: "Silently download view-once image/video/voice to your DM",
   async execute(sock, msg) {
     const from = msg.key.remoteJid;
     const userJid = msg.key.participant || msg.key.remoteJid;
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-    const quoted = msg.message?.extendedTextMessage?.contextInfo;
-    if (!quoted || !quoted.stanzaId) {
-      return sock.sendMessage(from, { text: "⚠️ Reply to a *view-once* message to use this command." }, { quoted: msg });
+    if (!quoted) {
+      return sock.sendMessage(from, {
+        text: "⚠️ Reply to a *view-once image*, *video*, or *voice note* with `.vv2`.",
+      }, { quoted: msg });
     }
 
     try {
-      // Load the original message
-      const quotedMsg = await sock.loadMessage(quoted.remoteJid || from, quoted.stanzaId);
-      if (!quotedMsg?.message) {
-        return sock.sendMessage(from, { text: "❌ Couldn't find the original view-once message." }, { quoted: msg });
+      // --- viewOnceMessageV2 ---
+      if (quoted.viewOnceMessageV2?.message?.imageMessage) {
+        const buffer = await downloadMediaMessage({ message: quoted.viewOnceMessageV2 }, "buffer", {});
+        await sock.sendMessage(userJid, { image: buffer, caption: "👁️‍🗨️ Saved view-once image" });
+        return;
+      }
+      if (quoted.viewOnceMessageV2?.message?.videoMessage) {
+        const buffer = await downloadMediaMessage({ message: quoted.viewOnceMessageV2 }, "buffer", {});
+        await sock.sendMessage(userJid, { video: buffer, caption: "👁️‍🗨️ Saved view-once video" });
+        return;
       }
 
-      // Identify type of view-once message
-      let type;
-      let viewOnceObj;
-
-      if (quotedMsg.message.viewOnceMessageV2) {
-        const inner = quotedMsg.message.viewOnceMessageV2.message;
-        type = Object.keys(inner)[0];
-        viewOnceObj = inner[type];
-      } else if (quotedMsg.message.viewOnceMessage) {
-        const inner = quotedMsg.message.viewOnceMessage.message;
-        type = Object.keys(inner)[0];
-        viewOnceObj = inner[type];
-      } else {
-        return sock.sendMessage(from, { text: "⚠️ That message is not a *view-once* type." }, { quoted: msg });
+      // --- viewOnceMessage (old shape) ---
+      if (quoted.viewOnceMessage?.message?.imageMessage) {
+        const buffer = await downloadMediaMessage({ message: quoted.viewOnceMessage }, "buffer", {});
+        await sock.sendMessage(userJid, { image: buffer, caption: "👁️‍🗨️ Saved view-once image" });
+        return;
+      }
+      if (quoted.viewOnceMessage?.message?.videoMessage) {
+        const buffer = await downloadMediaMessage({ message: quoted.viewOnceMessage }, "buffer", {});
+        await sock.sendMessage(userJid, { video: buffer, caption: "👁️‍🗨️ Saved view-once video" });
+        return;
       }
 
-      // Download the media
-      const stream = await sock.downloadMediaMessage({ message: { [type]: viewOnceObj } });
-      const buffer = Buffer.from(stream);
-
-      // Send it privately to the user
-      await sock.sendMessage(userJid, { text: "💾 *Saved view-once media:*" });
-
-      if (type.includes("image")) {
-        await sock.sendMessage(userJid, { image: buffer });
-      } else if (type.includes("video")) {
-        await sock.sendMessage(userJid, { video: buffer });
-      } else if (type.includes("audio")) {
-        await sock.sendMessage(userJid, { audio: buffer, mimetype: "audio/mpeg", ptt: true });
-      } else if (type.includes("document")) {
-        await sock.sendMessage(userJid, { document: buffer, fileName: "saved_file" });
-      } else {
-        await sock.sendMessage(userJid, { text: "⚠️ Unsupported view-once media type." });
+      // --- direct image/video ---
+      if (quoted.imageMessage?.viewOnce || quoted.imageMessage) {
+        const buffer = await downloadMediaMessage({ message: { imageMessage: quoted.imageMessage } }, "buffer", {});
+        await sock.sendMessage(userJid, { image: buffer, caption: "👁️‍🗨️ Saved image" });
+        return;
+      }
+      if (quoted.videoMessage?.viewOnce || quoted.videoMessage) {
+        const buffer = await downloadMediaMessage({ message: { videoMessage: quoted.videoMessage } }, "buffer", {});
+        await sock.sendMessage(userJid, { video: buffer, caption: "👁️‍🗨️ Saved video" });
+        return;
       }
 
-      // Optional: silent confirmation in group
-      // await sock.sendMessage(from, { text: "✅ Media sent to your DM." }, { quoted: msg });
+      // --- audio ---
+      if (quoted.audioMessage) {
+        const buffer = await downloadMediaMessage({ message: { audioMessage: quoted.audioMessage } }, "buffer", {});
+        const mimetype = quoted.audioMessage.mimetype || "audio/ogg; codecs=opus";
+        const isPtt = !!quoted.audioMessage.ptt;
+        await sock.sendMessage(userJid, {
+          audio: buffer,
+          mimetype,
+          ptt: isPtt,
+        });
+        return;
+      }
+
+      await sock.sendMessage(from, { text: "⚠️ That message doesn't contain view-once media or audio." }, { quoted: msg });
 
     } catch (err) {
-      console.error("vv2 error:", err);
-      await sock.sendMessage(from, { text: "❌ Failed to process view-once message." }, { quoted: msg });
+      console.error("❌ VV2 command error:", err);
+      await sock.sendMessage(from, { text: "❌ Failed to save media to DM." }, { quoted: msg });
     }
   },
 };
