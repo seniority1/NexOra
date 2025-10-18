@@ -4,8 +4,8 @@ export default {
   async execute(sock, msg) {
     const from = msg.key.remoteJid;
 
-v    const bannerUrl = "https://github.com/seniority1/NexOra-files/blob/main/file_00000000f45c61fbab4dc8d5d417130b.png"; 
-    // 👆 Replace this with your own logo/banner if you have one
+    // ✅ Use the raw GitHub link so the image loads properly
+    const bannerUrl = "https://raw.githubusercontent.com/seniority1/NexOra-files/main/file_00000000f45c61fbab4dc8d5d417130b.png";
 
     const reply = `
 🎨 *TEXT MAKER CATEGORY* 🎨
@@ -25,9 +25,13 @@ v    const bannerUrl = "https://github.com/seniority1/NexOra-files/blob/main/fil
 ✨ *Tip:* Try short names or phrases for best results!
     `;
 
-    await sock.sendMessage(from, {
-      image: { url: bannerUrl },
-      caption: reply.trim(),
-    }, { quoted: msg });
+    await sock.sendMessage(
+      from,
+      {
+        image: { url: bannerUrl },
+        caption: reply.trim(),
+      },
+      { quoted: msg }
+    );
   },
 };
