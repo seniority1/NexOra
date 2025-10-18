@@ -62,7 +62,7 @@ export default {
 
 📥 *DOWNLOADER* 📥
 ┌─────────────────────────┐
-│ 🎵 .tik <link>
+│ 🎵 .tiktok <link>
 │ 📘 .fb <link>
 │ ▶️ .yt <link>
 │ 📸 .ig <link>
