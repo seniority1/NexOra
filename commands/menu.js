@@ -73,6 +73,11 @@ export default {
 │ 🚫 .block @user
 │ ✅ .unblock @user
 │ 🧾 .blockedlist
+│ 🧼 .clearchats
+│ 🌍 .update
+│ 📝 .setproname <name>
+│ 🧠 .setbio <text>
+│ 🖼️ .setpropic (reply img)
 │ ♻️ .restart
 │ 🔌 .shutdown
 │ 🔒 .private
