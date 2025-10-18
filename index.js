@@ -66,8 +66,8 @@ sock.sendMessage = async function (jid, content = {}, options = {}) {
       content.contextInfo.forwardingScore = 999;
       content.contextInfo.isForwarded = true;
       content.contextInfo.forwardedNewsletterMessageInfo = {
-        newsletterJid: "120363417002426604@newsletter",
-        newsletterName: "𝐍𝐈𝐆𝐇𝐓-𝐇𝐎𝐖𝐋𝐄𝐑....!!™",
+        newsletterJid: "120363404144195844@newsletter",
+        newsletterName: "NexOra....!!™",
         serverMessageId: -1,
       };
     }
@@ -99,7 +99,7 @@ sock.sendMessage = async function (jid, content = {}, options = {}) {
 
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "open") {
-      console.log("✅ NoxOra connected!");
+      console.log("✅ NexOra connected!");
       try {
         await sock.sendMessage("2349160291884@s.whatsapp.net", {
           text: "🤖 *NoxOra is back online!* Running smoothly ✅",
