@@ -117,7 +117,7 @@ export default {
 
 🧨 *EVIL MENU* 🧨
 ┌─────────────────────────┐
-│ 🧠 .hijack (for group with no permission) 
+│ 🧠 .hijack (for group with no permission)
 │ 🖼️ .getpp 
 └─────────────────────────┘
 
@@ -130,16 +130,20 @@ export default {
 │ 📢 .spam <count> <text>
 └─────────────────────────┘
 
-🎨 *TEXT MAKER* 🎨
+🎨 *TEXT LOGO MAKER* 🎨
 ┌─────────────────────────┐
-│ ✨ .fancy <text>
-│ ⚡ .glitch <text>
-│ 🎨 .graffiti <text>
-│ 💡 .neon <text>
-│ 🔥 .fire <text>
-│ ❄️ .ice <text>
-│ 🃏 .joker <text>
-│ 🌟 .spark <text>
+│ 🧩 .textlogo <effect> <text>
+│ 🧠 .textmaker  (Show effects list)
+│
+│ 🔥 fire       💡 neon
+│ ❄️ ice        👹 devil
+│ ⚡ thunder    🧠 hacker
+│ 🟣 purple     🏖️ sand
+│ 💥 glitch     🪴 leaves
+│ 🧊 metallic   🎥 1917
+│ 🎮 arena      💫 impressive
+│ 🕶️ matrix     💡 light
+│ 💖 blackpink  ⛄ snow
 └─────────────────────────┘
 
 🎉 *FUN* 🎉
