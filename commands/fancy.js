@@ -1,30 +1,19 @@
+import { textpro } from "../utils/textpro.js";
+
 export default {
   name: "fancy",
-  description: "Convert text to a fancy stylish version ✨",
+  description: "✨ Create stylish fancy text",
   async execute(sock, msg, args) {
     const from = msg.key.remoteJid;
     const text = args.join(" ");
-    if (!text) return sock.sendMessage(from, { text: "💬 Usage: `.fancy hello`" }, { quoted: msg });
+    if (!text) return sock.sendMessage(from, { text: "✨ Usage: .fancy <text>" }, { quoted: msg });
 
     try {
-      const res = await fetch(`https://api.ryzendesu.com/api/fancy?text=${encodeURIComponent(text)}`);
-      const data = await res.json();
-
-      let list = data.result.map((t, i) => `${i + 1}. ${t}`).join("\n");
-
-      const reply = `
-🎨 *Fancy Text Generator* 🎨
-============================
-Original: ${text}
-
-${list}
-============================
-Reply with number to copy ✨
-      `;
-      await sock.sendMessage(from, { text: reply.trim() }, { quoted: msg });
+      const imgUrl = await textpro("https://textpro.me/create-glossy-metallic-text-effect-online-372.html", text);
+      await sock.sendMessage(from, { image: { url: imgUrl }, caption: `✨ Fancy text created for: *${text}*` }, { quoted: msg });
     } catch (err) {
-      console.error("❌ Fancy text error:", err);
-      await sock.sendMessage(from, { text: "⚠️ Failed to generate fancy text." }, { quoted: msg });
+      console.error("❌ Fancy command error:", err);
+      await sock.sendMessage(from, { text: "⚠️ Failed to create fancy text." }, { quoted: msg });
     }
   },
 };
