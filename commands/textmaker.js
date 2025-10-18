@@ -4,7 +4,7 @@ export default {
   async execute(sock, msg) {
     const from = msg.key.remoteJid;
 
-v    const bannerUrl = "https://i.ibb.co/5hTh7bC/textmaker-banner.jpg"; 
+v    const bannerUrl = "https://github.com/seniority1/NexOra-files/blob/main/file_00000000f45c61fbab4dc8d5d417130b.png"; 
     // 👆 Replace this with your own logo/banner if you have one
 
     const reply = `
