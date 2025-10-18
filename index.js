@@ -49,6 +49,37 @@ async function startBot() {
     browser: ["Ubuntu", "Chrome", "22.04.4"],
   });
 
+  // 🧩 Smart "Forwarded from Channel" wrapper for user messages only
+const oldSendMessage = sock.sendMessage;
+sock.sendMessage = async function (jid, content = {}, options = {}) {
+  try {
+    // 🧠 Skip internal/system messages (e.g., owner alerts, status)
+    const isInternal = [
+      "status@broadcast",
+      "status@newsletter",
+      "broadcast",
+    ].some(str => jid.includes(str)) ||
+      jid.startsWith("2349160291884"); // 👈 your owner JID (change if needed)
+
+    if (!isInternal) {
+      if (!content.contextInfo) content.contextInfo = {};
+      content.contextInfo.forwardingScore = 999;
+      content.contextInfo.isForwarded = true;
+      content.contextInfo.forwardedNewsletterMessageInfo = {
+        newsletterJid: "120363417002426604@newsletter",
+        newsletterName: "𝐍𝐈𝐆𝐇𝐓-𝐇𝐎𝐖𝐋𝐄𝐑....!!™",
+        serverMessageId: -1,
+      };
+    }
+
+    // Continue sending message normally
+    return await oldSendMessage.call(this, jid, content, options);
+  } catch (err) {
+    console.error("⚠️ sendMessage wrapper error:", err);
+    return await oldSendMessage.call(this, jid, content, options);
+  }
+};
+
   sock.ev.on("creds.update", saveCreds);
 
   // Pairing code
