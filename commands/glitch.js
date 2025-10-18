@@ -1,16 +1,19 @@
+import { textpro } from "../utils/textpro.js";
+
 export default {
   name: "glitch",
-  description: "Generate glitch styled text logo 🪩",
+  description: "⚡ Create a glitch-style logo",
   async execute(sock, msg, args) {
     const from = msg.key.remoteJid;
     const text = args.join(" ");
-    if (!text) return sock.sendMessage(from, { text: "⚡ Usage: `.glitch NexOra`" }, { quoted: msg });
+    if (!text) return sock.sendMessage(from, { text: "⚡ Usage: .glitch <text>" }, { quoted: msg });
 
-    const api = `https://api.xteam.xyz/textpro/glitch?text=${encodeURIComponent(text)}&apikey=YOUR_API_KEY`;
-    
-    await sock.sendMessage(from, {
-      image: { url: api },
-      caption: `⚡ *Glitch Effect for:* ${text}`,
-    }, { quoted: msg });
+    try {
+      const imgUrl = await textpro("https://textpro.me/create-glitch-text-effect-style-tik-tok-983.html", text);
+      await sock.sendMessage(from, { image: { url: imgUrl }, caption: `⚡ Glitch text created for: *${text}*` }, { quoted: msg });
+    } catch (err) {
+      console.error("❌ Glitch command error:", err);
+      await sock.sendMessage(from, { text: "⚠️ Failed to create glitch logo." }, { quoted: msg });
+    }
   },
 };
