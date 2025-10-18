@@ -20,18 +20,36 @@ const __dirname = path.dirname(__filename);
 const commands = new Map();
 const commandFiles = fs.readdirSync(path.join(__dirname, "commands")).filter(f => f.endsWith(".js"));
 
+// 📦 Load commands with alias support
 async function loadCommands() {
   for (const file of commandFiles) {
     try {
-      const { default: cmd } = await import(`./commands/${file}`);
+      const module = await import(`./commands/${file}`);
+      const cmd = module.default;
+      const aliases = module.aliases || [];
+
+      if (!cmd || !cmd.name) {
+        console.warn(`⚠️ Skipped invalid command file: ${file}`);
+        continue;
+      }
+
       commands.set(cmd.name, cmd);
+
+      // 🔁 Register aliases (e.g., .fire, .neon)
+      for (const alias of aliases) {
+        if (!commands.has(alias)) {
+          commands.set(alias, cmd);
+        }
+      }
+
+      console.log(`✅ Loaded command: ${cmd.name}${aliases.length ? ` (${aliases.join(", ")})` : ""}`);
     } catch (err) {
       console.error(`❌ Failed to load command ${file}:`, err.message);
     }
   }
-  console.log(`✅ Loaded ${commands.size} commands.`);
-}
 
+  console.log(`📘 Total commands loaded: ${commands.size}`);
+                   }
 async function startBot() {
   await loadCommands();
 
