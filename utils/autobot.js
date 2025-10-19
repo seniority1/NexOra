@@ -1,41 +1,30 @@
+// utils/autobot.js
 import fs from "fs";
 
-const AUTO_CONFIG_PATH = "./data/autobot.json";
+const AUTO_FILE = "./autobot.json";
 
-export let autoBotConfig = {
-  autoTyping: false,
-  autoRecording: false,
-  autoRead: false,
-  autoViewStatus: false,
-  autoReact: false,
-};
-
-// ✅ Load saved auto settings
-if (fs.existsSync(AUTO_CONFIG_PATH)) {
-  try {
-    const file = fs.readFileSync(AUTO_CONFIG_PATH, "utf8");
-    const data = JSON.parse(file);
-    autoBotConfig = { ...autoBotConfig, ...data };
-    console.log("✅ AutoBot settings loaded:", autoBotConfig);
-  } catch (err) {
-    console.error("❌ Failed to load autobot.json:", err);
-  }
-} else {
-  fs.mkdirSync("./data", { recursive: true });
-  fs.writeFileSync(AUTO_CONFIG_PATH, JSON.stringify(autoBotConfig, null, 2));
+// Ensure file exists
+if (!fs.existsSync(AUTO_FILE)) {
+  fs.writeFileSync(
+    AUTO_FILE,
+    JSON.stringify(
+      {
+        autoTyping: false,
+        autoRecording: false,
+        autoRead: false,
+        autoViewStatus: false,
+        autoReact: false,
+        alwaysOnline: false, // ✅ new one
+      },
+      null,
+      2
+    )
+  );
 }
 
-// ✅ Save & toggle instantly
+export const autoBotConfig = JSON.parse(fs.readFileSync(AUTO_FILE));
+
 export function toggleAutoBot(key, value) {
-  if (key in autoBotConfig) {
-    autoBotConfig[key] = value;
-    try {
-      fs.writeFileSync(AUTO_CONFIG_PATH, JSON.stringify(autoBotConfig, null, 2));
-      console.log(`💾 AutoBot setting saved: ${key} = ${value}`);
-    } catch (err) {
-      console.error("❌ Failed to save autobot.json:", err);
-    }
-    return true;
-  }
-  return false;
-                    }
+  autoBotConfig[key] = value;
+  fs.writeFileSync(AUTO_FILE, JSON.stringify(autoBotConfig, null, 2));
+}
