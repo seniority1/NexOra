@@ -12,6 +12,8 @@ import { fileURLToPath } from "url";
 import { isFeatureOn } from "./utils/settings.js";
 import { isAdmin } from "./utils/isAdmin.js"; // ✅ Import admin check
 import { autoBotConfig } from "./utils/autobot.js";  // ✅ This was missing
+import { getMode } from "./utils/mode.js";
+import { isOwner } from "./utils/isOwner.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -323,7 +325,14 @@ sock.ev.on("messages.upsert", async ({ messages }) => {
 
     const command = commands.get(commandName);
     if (command) {
-      try {
+      try { // 🔐 Mode system check
+const sender = msg.key.participant || msg.key.remoteJid;
+const mode = getMode();
+
+// If bot is in private mode and user is not owner → ignore
+if (mode === "private" && !isOwner(sender)) {
+  return; // 🚫 Ignore non-owner commands silently
+}
         await command.execute(sock, msg, args);
       } catch (err) {
         console.error("❌ Command error:", err);
