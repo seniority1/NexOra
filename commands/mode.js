@@ -1,35 +1,27 @@
-import { isOwner } from "../utils/isOwner.js";
-import { getMode, setMode } from "../utils/mode.js";
+// commands/mode.js
+import { setMode, getMode } from "../utils/mode.js";
 
 export default {
   name: "mode",
-  description: "Switch between public or private bot mode (owner only)",
+  description: "Switch bot mode between public/private",
   async execute(sock, msg, args) {
     const from = msg.key.remoteJid;
-    const sender = msg.key.participant || msg.key.remoteJid;
+    const mode = args[0]?.toLowerCase();
 
-    // ✅ Only owners can use it
-    if (!isOwner(sender)) {
-      return sock.sendMessage(from, { text: "❌ Only bot owners can change mode." });
-    }
-
-    const newMode = args[0]?.toLowerCase();
-    if (!newMode) {
+    if (!mode) {
       const current = getMode();
-      return sock.sendMessage(from, { text: `📢 *Current Mode:* ${current.toUpperCase()}` });
+      return sock.sendMessage(from, { text: `🟢 Current mode: *${current.toUpperCase()}*` });
     }
 
-    if (!["public", "private"].includes(newMode)) {
-      return sock.sendMessage(from, { text: "⚠️ Usage: .mode public | .mode private" });
+    if (mode !== "public" && mode !== "private") {
+      return sock.sendMessage(from, { text: "⚙️ Use: .mode public OR .mode private" });
     }
 
-    setMode(newMode);
+    setMode(mode);
     await sock.sendMessage(from, {
-      text: `✅ Mode changed to *${newMode.toUpperCase()}*.\n${
-        newMode === "private"
-          ? "🔒 Only owners can use bot commands now."
-          : "🌍 Everyone can use bot commands."
-      }`,
+      text: mode === "public"
+        ? "🟢 Bot is now in *Public mode successfully*."
+        : "🔒 Bot is now in *Private mode*.",
     });
   },
 };
