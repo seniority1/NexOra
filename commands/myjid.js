@@ -1,24 +1,26 @@
-import { isOwner } from "../utils/isOwner.js";
-
 export default {
   name: "myjid",
-  description: "Show your WhatsApp JID (owner only)",
+  description: "Show your WhatsApp JID",
   async execute(sock, msg) {
     const from = msg.key.remoteJid;
+
+    // 🧠 Detect sender (works for private and group)
     const sender = msg.key.participant || msg.key.remoteJid;
 
-    // ✅ Only owners can use this command
-    if (!isOwner(sender)) {
-      return sock.sendMessage(from, { text: "❌ Only bot owners can use this command." });
+    // 🧩 Try to extract @lid (device JID) if available
+    let jid = sender;
+
+    if (msg.key?.id && msg.key.id.includes("::")) {
+      const [possibleJid] = msg.key.id.split("::");
+      if (possibleJid.includes("@lid")) jid = possibleJid;
     }
 
-    // Format the sender JID
-    const jid = sender.endsWith("@lid") || sender.endsWith("@s.whatsapp.net")
-      ? sender
-      : `${sender}@s.whatsapp.net`;
+    // 🧰 Normalize JID (make sure it has domain)
+    if (!jid.includes("@")) jid = `${jid}@s.whatsapp.net`;
 
+    // 💬 Send result
     await sock.sendMessage(from, {
-      text: `👑 *Your JID:*\n\`\`\`${jid}\`\`\``
-    });
+      text: `🪪 *Your JID:*\n\`\`\`${jid}\`\`\``
+    }, { quoted: msg });
   },
 };
