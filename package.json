@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.4",
+    "adm-zip": "^0.5.10",
     "axios": "^1.6.8",
     "express": "^4.19.2",
     "google-tts-api": "^2.0.2",
