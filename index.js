@@ -125,6 +125,16 @@ sock.sendMessage = async function (jid, content = {}, options = {}) {
           text: "🤖 *NoxOra is back online!* Running smoothly ✅",
         });
       } catch {}
+      // 🟢 Always Online Feature
+  setInterval(async () => {
+    if (autoBotConfig.alwaysOnline) {
+      try {
+        await sock.sendPresenceUpdate("available");
+      } catch (err) {
+        console.error("⚠️ AlwaysOnline error:", err.message);
+      }
+    }
+  }, 15000); // every 15 seconds
     } else if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode;
       console.log("❌ Connection closed:", reason);
