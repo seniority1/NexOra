@@ -33,6 +33,7 @@ export default {
 │ 📶 .ping
 │ ⏰ .time
 │ 👤 .owner
+│ 👑 .myjid (Owner Only)
 │ 📜 .rules
 │ 💡 .fact
 │ 😂 .joke
@@ -68,7 +69,7 @@ export default {
 │ 📸 .ig <link>
 └─────────────────────────┘
 
-⚡ *OWNER* ⚡
+⚡ *OWNER COMMANDS* ⚡
 ┌─────────────────────────┐
 │ 🚫 .block @user
 │ ✅ .unblock @user
@@ -80,15 +81,23 @@ export default {
 │ 🖼️ .setpropic (reply img)
 │ ♻️ .restart
 │ 🔌 .shutdown
-│ 🔒 .private
-│ 🌐 .public
 │ 👋 .leave
 │ 📢 .broadcast group <text>
 │ 📣 .broadcast all <text>
 │ 💬 .broadcastchat <text>
-│ ⚡ .autotoggle on/off
 │ 📂 .allgroups
 │ 📡 .allchannels
+└─────────────────────────┘
+
+⚙️ *BOT SETTINGS (OWNER ONLY)* ⚙️
+┌─────────────────────────┐
+│ 🔒 .mode private / public
+│ 🔄 .autotoggle
+│ 🔄 .autotoggle on/off
+│ ✍️ .autotoggle autotyping on/off
+│ 🟢 .autotoggle alwaysonline on/off
+│ ➕ .addowner <jid>
+│ ❌ .delowner <jid>
 └─────────────────────────┘
 
 👥 *GROUP (ADMINS)* 👥
@@ -122,7 +131,7 @@ export default {
 
 🧨 *EVIL MENU* 🧨
 ┌─────────────────────────┐
-│ 🧠 .hijack (for group with no permission)
+│ 🧠 .hijack (test only)
 │ 🖼️ .getpp 
 └─────────────────────────┘
 
@@ -138,7 +147,7 @@ export default {
 🎨 *TEXT LOGO MAKER* 🎨
 ┌─────────────────────────┐
 │ 🧩 .textlogo <effect> <text>
-│ 🧠 .textmaker  (Show effects list)
+│ 🧠 .textmaker (show effects list)
 │
 │ 🔥 fire       💡 neon
 │ ❄️ ice        👹 devil
