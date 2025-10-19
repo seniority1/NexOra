@@ -1,9 +1,11 @@
+// commands/autotoggle.js
 import { isOwner } from "../utils/isOwner.js";
 import { autoBotConfig, toggleAutoBot } from "../utils/autobot.js";
 
 export default {
   name: "autotoggle",
   description: "Toggle auto features (Owner only)",
+
   async execute(sock, msg, args) {
     const from = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -23,6 +25,7 @@ export default {
       autoread: "autoRead",
       autoviewstat: "autoViewStatus",
       autoreact: "autoReact",
+      alwaysonline: "alwaysOnline", // ✅ new one
     };
 
     // 📌 Show all current states if no args
@@ -36,6 +39,7 @@ export default {
 • autoread: ${autoBotConfig.autoRead ? "✅ ON" : "❌ OFF"}
 • autoviewstat: ${autoBotConfig.autoViewStatus ? "✅ ON" : "❌ OFF"}
 • autoreact: ${autoBotConfig.autoReact ? "✅ ON" : "❌ OFF"}
+• alwaysonline: ${autoBotConfig.alwaysOnline ? "✅ ON" : "❌ OFF"}   👈
 
 📌 *Usage:*  
 .autotoggle <feature> on/off
