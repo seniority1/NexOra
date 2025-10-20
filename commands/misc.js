@@ -1,7 +1,7 @@
 // commands/misc.js
 import axios from "axios";
 import { downloadContentFromMessage } from "@whiskeysockets/baileys";
-import { uploadImage } from "../utils/uploadImage.js";  // ✅ now using utils
+import { uploadImage } from "../utils/uploadImage.js";
 
 async function getQuotedOrOwnImageUrl(sock, msg) {
   // 1️⃣ Quoted image
@@ -44,22 +44,23 @@ async function getQuotedOrOwnImageUrl(sock, msg) {
 
 export default {
   name: "misc",
-  description: "Fun image manipulation commands (heart, horny, tweet, etc.)",
+  description: "Fun image & meme manipulation commands",
 
   async execute(sock, msg, args) {
     const chatId = msg.key.remoteJid;
     const sub = (args[0] || "").toLowerCase();
     const rest = args.slice(1);
 
-    async function simpleAvatarOnly(endpoint) {
+    async function simpleAvatarOnly(endpoint, path = "misc") {
       const avatarUrl = await getQuotedOrOwnImageUrl(sock, msg);
-      const url = `https://api.some-random-api.com/canvas/misc/${endpoint}?avatar=${encodeURIComponent(avatarUrl)}`;
+      const url = `https://api.some-random-api.com/canvas/${path}/${endpoint}?avatar=${encodeURIComponent(avatarUrl)}`;
       const response = await axios.get(url, { responseType: "arraybuffer" });
       await sock.sendMessage(chatId, { image: Buffer.from(response.data) }, { quoted: msg });
     }
 
     try {
       switch (sub) {
+        // ✅ Avatar effects
         case "heart":
         case "horny":
         case "circle":
@@ -68,9 +69,22 @@ export default {
         case "lolice":
         case "simpcard":
         case "tonikawa":
-          await simpleAvatarOnly(sub);
+        case "blur":
+        case "invert":
+        case "greyscale":
+        case "sepia":
+        case "pixelate":
+        case "wasted":
+        case "passed":
+        case "triggered":
+        case "jail":
+        case "glass":
+        case "comrade":
+        case "gay":
+          await simpleAvatarOnly(sub, ["blur","invert","greyscale","sepia","pixelate","wasted"].includes(sub) ? "effect" : "overlay");
           break;
 
+        // ✅ Meme templates with text
         case "its-so-stupid": {
           const dog = rest.join(" ").trim();
           if (!dog) {
@@ -145,32 +159,79 @@ export default {
           break;
         }
 
-        case "comrade":
-        case "gay":
-        case "glass":
-        case "jail":
-        case "passed":
-        case "triggered": {
-          const avatarUrl = await getQuotedOrOwnImageUrl(sock, msg);
-          const url = `https://api.some-random-api.com/canvas/overlay/${sub}?avatar=${encodeURIComponent(avatarUrl)}`;
+        // ✅ Meme templates (no avatar required)
+        case "changemymind":
+        case "drake":
+        case "facts":
+        case "wanted": {
+          const text = rest.join(" ").trim();
+          if (!text) {
+            await sock.sendMessage(chatId, { text: `Usage: .misc ${sub} <text>` }, { quoted: msg });
+            return;
+          }
+          const url = `https://api.some-random-api.com/canvas/meme/${sub}?text=${encodeURIComponent(text)}`;
           const response = await axios.get(url, { responseType: "arraybuffer" });
           await sock.sendMessage(chatId, { image: Buffer.from(response.data) }, { quoted: msg });
           break;
         }
 
+        // ✅ Dynamic templates
+        case "ship": {
+          const [user1, user2] = rest;
+          if (!user1 || !user2) {
+            await sock.sendMessage(chatId, { text: "Usage: .misc ship <name1> <name2>" }, { quoted: msg });
+            return;
+          }
+          const url = `https://api.some-random-api.com/canvas/misc/ship?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`;
+          const response = await axios.get(url, { responseType: "arraybuffer" });
+          await sock.sendMessage(chatId, { image: Buffer.from(response.data) }, { quoted: msg });
+          break;
+        }
+
+        case "quote":
+        case "animequote": {
+          const text = rest.join(" ").trim();
+          if (!text) {
+            await sock.sendMessage(chatId, { text: `Usage: .misc ${sub} <text>` }, { quoted: msg });
+            return;
+          }
+          const avatarUrl = await getQuotedOrOwnImageUrl(sock, msg);
+          const url = `https://api.some-random-api.com/canvas/misc/${sub}?quote=${encodeURIComponent(text)}&avatar=${encodeURIComponent(avatarUrl)}`;
+          const response = await axios.get(url, { responseType: "arraybuffer" });
+          await sock.sendMessage(chatId, { image: Buffer.from(response.data) }, { quoted: msg });
+          break;
+        }
+
+        // ✅ Help menu
         default:
-          await sock.sendMessage(
-            chatId,
-            {
-              text: `🧰 Usage: .misc <heart|horny|circle|lgbt|lied|lolice|simpcard|tonikawa|its-so-stupid <text>|namecard u|b|d?|oogway <q>|oogway2 <q>|tweet dn|un|c|theme?|youtube-comment un|c|comrade|gay|glass|jail|passed|triggered>`,
-            },
-            { quoted: msg }
-          );
+          await sock.sendMessage(chatId, {
+            text: `
+┏━━🎨 *MISC COMMANDS* ━━┓
+👤 Avatar Effects:
+• heart, horny, circle, lgbt, lied, lolice, simpcard, tonikawa
+• blur, invert, greyscale, sepia, pixelate, wasted, passed, triggered, jail, glass, comrade, gay
+
+🐶 Meme Templates:
+• its-so-stupid <text>
+• namecard username|birthday|desc
+• oogway <q>, oogway2 <q>
+• changemymind <text>, drake <text>, facts <text>, wanted <text>
+
+🐦 Social Templates:
+• tweet dn|un|comment|theme
+• youtube-comment un|comment
+• ship <name1> <name2>
+• quote <text>, animequote <text>
+
+💡 Tip: You can reply to an image, send one with command, or mention a user to use their avatar.
+┗━━━━━━━━━━━━━━━━━━┛
+            `.trim()
+          }, { quoted: msg });
           break;
       }
     } catch (error) {
       console.error("Error in misc command:", error);
-      await sock.sendMessage(chatId, { text: "❌ Failed to generate image. Check your parameters and try again." }, { quoted: msg });
+      await sock.sendMessage(chatId, { text: "❌ Failed to generate image. Try again later." }, { quoted: msg });
     }
   },
 };
