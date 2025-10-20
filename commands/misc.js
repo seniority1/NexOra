@@ -1,7 +1,7 @@
 // commands/misc.js
 import axios from "axios";
 import { downloadContentFromMessage } from "@whiskeysockets/baileys";
-import { uploadImage } from "../utils/uploadImage.js";
+import { uploadImage } from "../utils/uploadImage.js"; // ✅ using utils
 
 async function getQuotedOrOwnImageUrl(sock, msg) {
   // 1️⃣ Quoted image
@@ -44,23 +44,22 @@ async function getQuotedOrOwnImageUrl(sock, msg) {
 
 export default {
   name: "misc",
-  description: "Fun image & meme manipulation commands",
+  description: "Fun image manipulation commands (heart, horny, tweet, etc.)",
 
   async execute(sock, msg, args) {
     const chatId = msg.key.remoteJid;
     const sub = (args[0] || "").toLowerCase();
     const rest = args.slice(1);
 
-    async function simpleAvatarOnly(endpoint, path = "misc") {
+    async function simpleAvatarOnly(endpoint) {
       const avatarUrl = await getQuotedOrOwnImageUrl(sock, msg);
-      const url = `https://api.some-random-api.com/canvas/${path}/${endpoint}?avatar=${encodeURIComponent(avatarUrl)}`;
+      const url = `https://api.some-random-api.com/canvas/misc/${endpoint}?avatar=${encodeURIComponent(avatarUrl)}`;
       const response = await axios.get(url, { responseType: "arraybuffer" });
       await sock.sendMessage(chatId, { image: Buffer.from(response.data) }, { quoted: msg });
     }
 
     try {
       switch (sub) {
-        // ✅ Avatar effects
         case "heart":
         case "horny":
         case "circle":
@@ -69,22 +68,9 @@ export default {
         case "lolice":
         case "simpcard":
         case "tonikawa":
-        case "blur":
-        case "invert":
-        case "greyscale":
-        case "sepia":
-        case "pixelate":
-        case "wasted":
-        case "passed":
-        case "triggered":
-        case "jail":
-        case "glass":
-        case "comrade":
-        case "gay":
-          await simpleAvatarOnly(sub, ["blur","invert","greyscale","sepia","pixelate","wasted"].includes(sub) ? "effect" : "overlay");
+          await simpleAvatarOnly(sub);
           break;
 
-        // ✅ Meme templates with text
         case "its-so-stupid": {
           const dog = rest.join(" ").trim();
           if (!dog) {
@@ -159,79 +145,63 @@ export default {
           break;
         }
 
-        // ✅ Meme templates (no avatar required)
-        case "changemymind":
-        case "drake":
-        case "facts":
-        case "wanted": {
-          const text = rest.join(" ").trim();
-          if (!text) {
-            await sock.sendMessage(chatId, { text: `Usage: .misc ${sub} <text>` }, { quoted: msg });
-            return;
-          }
-          const url = `https://api.some-random-api.com/canvas/meme/${sub}?text=${encodeURIComponent(text)}`;
-          const response = await axios.get(url, { responseType: "arraybuffer" });
-          await sock.sendMessage(chatId, { image: Buffer.from(response.data) }, { quoted: msg });
-          break;
-        }
-
-        // ✅ Dynamic templates
-        case "ship": {
-          const [user1, user2] = rest;
-          if (!user1 || !user2) {
-            await sock.sendMessage(chatId, { text: "Usage: .misc ship <name1> <name2>" }, { quoted: msg });
-            return;
-          }
-          const url = `https://api.some-random-api.com/canvas/misc/ship?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`;
-          const response = await axios.get(url, { responseType: "arraybuffer" });
-          await sock.sendMessage(chatId, { image: Buffer.from(response.data) }, { quoted: msg });
-          break;
-        }
-
-        case "quote":
-        case "animequote": {
-          const text = rest.join(" ").trim();
-          if (!text) {
-            await sock.sendMessage(chatId, { text: `Usage: .misc ${sub} <text>` }, { quoted: msg });
-            return;
-          }
+        case "comrade":
+        case "gay":
+        case "glass":
+        case "jail":
+        case "passed":
+        case "triggered": {
           const avatarUrl = await getQuotedOrOwnImageUrl(sock, msg);
-          const url = `https://api.some-random-api.com/canvas/misc/${sub}?quote=${encodeURIComponent(text)}&avatar=${encodeURIComponent(avatarUrl)}`;
+          const url = `https://api.some-random-api.com/canvas/overlay/${sub}?avatar=${encodeURIComponent(avatarUrl)}`;
           const response = await axios.get(url, { responseType: "arraybuffer" });
           await sock.sendMessage(chatId, { image: Buffer.from(response.data) }, { quoted: msg });
           break;
         }
 
-        // ✅ Help menu
         default:
           await sock.sendMessage(chatId, {
             text: `
-┏━━🎨 *MISC COMMANDS* ━━┓
-👤 Avatar Effects:
-• heart, horny, circle, lgbt, lied, lolice, simpcard, tonikawa
-• blur, invert, greyscale, sepia, pixelate, wasted, passed, triggered, jail, glass, comrade, gay
+🧰 *MISC COMMANDS USAGE*
 
-🐶 Meme Templates:
-• its-so-stupid <text>
-• namecard username|birthday|desc
-• oogway <q>, oogway2 <q>
-• changemymind <text>, drake <text>, facts <text>, wanted <text>
+📌 *Avatar-based effects*  
+• .misc heart  
+• .misc horny  
+• .misc circle  
+• .misc lgbt  
+• .misc lied  
+• .misc lolice  
+• .misc simpcard  
+• .misc tonikawa  
 
-🐦 Social Templates:
-• tweet dn|un|comment|theme
-• youtube-comment un|comment
-• ship <name1> <name2>
-• quote <text>, animequote <text>
+🐶 *Meme Templates*  
+• .misc its-so-stupid <text>  
+• .misc namecard username|birthday|description(optional)  
+• .misc oogway <quote>  
+• .misc oogway2 <quote>  
 
-💡 Tip: You can reply to an image, send one with command, or mention a user to use their avatar.
-┗━━━━━━━━━━━━━━━━━━┛
-            `.trim()
+🐦 *Social Templates*  
+• .misc tweet displayname|username|comment|theme(optional light/dark)  
+• .misc youtube-comment username|comment  
+
+🌈 *Overlay Effects*  
+• .misc comrade  
+• .misc gay  
+• .misc glass  
+• .misc jail  
+• .misc passed  
+• .misc triggered  
+
+💡 *Tip:* You can also  
+- 📎 Quote an image  
+- 👤 Mention a user  
+- 🖼️ Send an image with the command
+`.trim()
           }, { quoted: msg });
           break;
       }
     } catch (error) {
       console.error("Error in misc command:", error);
-      await sock.sendMessage(chatId, { text: "❌ Failed to generate image. Try again later." }, { quoted: msg });
+      await sock.sendMessage(chatId, { text: "❌ Failed to generate image. Check your parameters and try again." }, { quoted: msg });
     }
   },
 };
