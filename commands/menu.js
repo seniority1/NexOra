@@ -1,4 +1,16 @@
+import fs from "fs";
+
 const startTime = Date.now();
+const MODE_FILE = "./mode.json";
+
+function getMode() {
+  try {
+    const data = JSON.parse(fs.readFileSync(MODE_FILE));
+    return data.mode || "public";
+  } catch {
+    return "public";
+  }
+}
 
 function formatRuntime(ms) {
   const sec = Math.floor(ms / 1000);
@@ -14,6 +26,7 @@ export default {
   async execute(sock, msg) {
     const from = msg.key.remoteJid;
     const runtime = formatRuntime(Date.now() - startTime);
+    const mode = getMode().toUpperCase();
 
     const menu = `
 ╔══════════════════════════╗
@@ -22,6 +35,7 @@ export default {
 ║ 👑 Owner: Seniority
 ║ ⏱ Runtime: ${runtime}
 ║ 📡 Status: Online
+║ ⚙ Mode: ${mode}
 ║ ⚙ Engine: Baileys
 ╚══════════════════════════╝
 
