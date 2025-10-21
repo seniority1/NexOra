@@ -1,7 +1,7 @@
 import fs from 'fs'
 
 export default {
-  name: ".vcf",
+  name: "vcf",
   description: "Export all group members as a .vcf contact file (with names if available)",
   async execute(sock, msg) {
     const from = msg.key.remoteJid
