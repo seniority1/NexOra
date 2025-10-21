@@ -14,6 +14,7 @@ import { isAdmin } from "./utils/isAdmin.js"; // ✅ Import admin check
 import { autoBotConfig } from "./utils/autobot.js";  // ✅ This was missing
 import { getMode } from "./utils/mode.js";
 import { isOwner } from "./utils/isOwner.js";
+import { isFiltered, addFilter, isSpam, addSpam, resetSpam } from "./utils/antispam.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,6 +22,10 @@ const __dirname = path.dirname(__filename);
 // 📦 Load commands
 const commands = new Map();
 const commandFiles = fs.readdirSync(path.join(__dirname, "commands")).filter(f => f.endsWith(".js"));
+
+// 🧱 Spam DB
+const spamDB = [];
+resetSpam(spamDB);
 
 // 📦 Load commands with alias support
 async function loadCommands() {
@@ -322,34 +327,51 @@ sock.ev.on("messages.upsert", async ({ messages }) => {
   }
 });
   // 🧠 Command handler
-  sock.ev.on("messages.upsert", async ({ messages }) => {
-    const msg = messages[0];
-    if (!msg.message) return;
+sock.ev.on("messages.upsert", async ({ messages }) => {
+  const msg = messages[0];
+  if (!msg.message) return;
 
-    const from = msg.key.remoteJid;
-    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
-    if (!text.startsWith(".")) return;
+  const from = msg.key.remoteJid;
+  const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+  if (!text.startsWith(".")) return;
 
-    const args = text.trim().slice(1).split(/ +/);
-    const commandName = args.shift().toLowerCase();
+  const args = text.trim().slice(1).split(/ +/);
+  const commandName = args.shift().toLowerCase();
 
-    const command = commands.get(commandName);
-    if (command) {
-      try { // 🔐 Mode system check
-const sender = msg.key.participant || msg.key.remoteJid;
-const mode = getMode();
+  const command = commands.get(commandName);
 
-// If bot is in private mode and user is not owner → ignore
-if (mode === "private" && !isOwner(sender)) {
-  return; // 🚫 Ignore non-owner commands silently
-}
-        await command.execute(sock, msg, args);
-      } catch (err) {
-        console.error("❌ Command error:", err);
-        await sock.sendMessage(from, { text: "⚠️ Command error occurred." });
+  if (command) {
+    try {
+      const sender = msg.key.participant || msg.key.remoteJid;
+      const mode = getMode();
+
+      // 🔐 Mode system check
+      if (mode === "private" && !isOwner(sender)) {
+        return; // 🚫 Ignore non-owner commands silently
       }
-    }
-  });
-}
 
+      // 🛡️ Anti-Spam System
+      if (isFiltered(sender)) {
+        await sock.sendMessage(from, { text: "⏳ Please wait a moment before using another command." }, { quoted: msg });
+        return;
+      }
+
+      addFilter(sender);
+      addSpam(sender, spamDB);
+
+      if (isSpam(sender, spamDB)) {
+        await sock.sendMessage(from, { text: "🚫 You’re sending too many commands. Please slow down." }, { quoted: msg });
+        return;
+      }
+
+      // ▶️ Execute command
+      await command.execute(sock, msg, args);
+    } catch (err) {
+      console.error("❌ Command error:", err);
+      await sock.sendMessage(from, { text: "⚠️ Command error occurred." });
+    }
+  }
+});
+
+// ✅ Start bot after setting everything up
 startBot();
