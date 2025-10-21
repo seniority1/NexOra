@@ -1,7 +1,7 @@
 import fs from 'fs'
 
 export default {
-  name: "exportvcf",
+  name: ".vcf",
   description: "Export all group members as a .vcf contact file",
   async execute(sock, msg) {
     const from = msg.key.remoteJid
@@ -12,11 +12,11 @@ export default {
       return
     }
 
-    // Fetch group metadata
+    // Fetch group info
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants
 
-    // Build VCF data
+    // Build the VCF data
     let vcf = ''
     for (const p of participants) {
       const jid = p.id
@@ -24,22 +24,22 @@ export default {
       vcf += `BEGIN:VCARD\nVERSION:3.0\nFN:WA ${phone}\nTEL;type=CELL;type=VOICE;waid=${phone}:+${phone}\nEND:VCARD\n`
     }
 
-    // Save locally
+    // Save file
     const safeName = metadata.subject.replace(/[^\w\s]/gi, '').trim() || 'group'
     const filePath = `./group_${safeName}_contacts.vcf`
     fs.writeFileSync(filePath, vcf, 'utf-8')
 
-    // Send status message
+    // Let the user know it's working
     await sock.sendMessage(from, { text: `📦 Found ${participants.length} contacts.\n📤 Sending ${metadata.subject}.vcf ...` }, { quoted: msg })
 
-    // Send the VCF file
+    // Send file
     await sock.sendMessage(from, {
       document: fs.readFileSync(filePath),
       mimetype: 'text/vcard',
       fileName: `${metadata.subject}.vcf`
     }, { quoted: msg })
 
-    // Cleanup
+    // Clean up
     fs.unlinkSync(filePath)
   },
 }
