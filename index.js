@@ -10,8 +10,8 @@ import makeWASocket, {
 import pino from "pino";
 import { fileURLToPath } from "url";
 import { isFeatureOn } from "./utils/settings.js";
-import { isAdmin } from "./utils/isAdmin.js"; // ✅ Import admin check
-import { autoBotConfig } from "./utils/autobot.js";  // ✅ This was missing
+import { isAdmin } from "./utils/isAdmin.js";
+import { autoBotConfig } from "./utils/autobot.js";
 import { getMode } from "./utils/mode.js";
 import { isOwner } from "./utils/isOwner.js";
 import { isFiltered, addFilter, isSpam, addSpam, resetSpam } from "./utils/antispam.js";
@@ -19,7 +19,7 @@ import { isFiltered, addFilter, isSpam, addSpam, resetSpam } from "./utils/antis
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 📦 Load commands
+// 🧠 Load commands
 const commands = new Map();
 const commandFiles = fs.readdirSync(path.join(__dirname, "commands")).filter(f => f.endsWith(".js"));
 
@@ -27,7 +27,7 @@ const commandFiles = fs.readdirSync(path.join(__dirname, "commands")).filter(f =
 const spamDB = [];
 resetSpam(spamDB);
 
-// 📦 Load commands with alias support
+// 📦 Load all command modules
 async function loadCommands() {
   for (const file of commandFiles) {
     try {
@@ -41,13 +41,7 @@ async function loadCommands() {
       }
 
       commands.set(cmd.name, cmd);
-
-      // 🔁 Register aliases (e.g., .fire, .neon)
-      for (const alias of aliases) {
-        if (!commands.has(alias)) {
-          commands.set(alias, cmd);
-        }
-      }
+      for (const alias of aliases) if (!commands.has(alias)) commands.set(alias, cmd);
 
       console.log(`✅ Loaded command: ${cmd.name}${aliases.length ? ` (${aliases.join(", ")})` : ""}`);
     } catch (err) {
@@ -56,7 +50,9 @@ async function loadCommands() {
   }
 
   console.log(`📘 Total commands loaded: ${commands.size}`);
-                   }
+}
+
+// 🚀 Start the bot
 async function startBot() {
   await loadCommands();
 
@@ -74,42 +70,37 @@ async function startBot() {
     browser: ["Ubuntu", "Chrome", "22.04.4"],
   });
 
-  // 🧩 Smart "Forwarded from Channel" wrapper for user messages only
-const oldSendMessage = sock.sendMessage;
-sock.sendMessage = async function (jid, content = {}, options = {}) {
-  try {
-    // 🧠 Skip internal/system messages (e.g., owner alerts, status)
-    const isInternal = [
-      "status@broadcast",
-      "status@newsletter",
-      "broadcast",
-    ].some(str => jid.includes(str)) ||
-      jid.startsWith("2349160291884"); // 👈 your owner JID (change if needed)
+  // 🧩 Forwarded message wrapper
+  const oldSendMessage = sock.sendMessage;
+  sock.sendMessage = async function (jid, content = {}, options = {}) {
+    try {
+      const isInternal =
+        ["status@broadcast", "status@newsletter", "broadcast"].some(str => jid.includes(str)) ||
+        jid.startsWith("2349160291884"); // Owner JID
 
-    if (!isInternal) {
-      if (!content.contextInfo) content.contextInfo = {};
-      content.contextInfo.forwardingScore = 999;
-      content.contextInfo.isForwarded = true;
-      content.contextInfo.forwardedNewsletterMessageInfo = {
-        newsletterJid: "120363404144195844@newsletter",
-        newsletterName: "NexOra....!!™",
-        serverMessageId: -1,
-      };
+      if (!isInternal) {
+        if (!content.contextInfo) content.contextInfo = {};
+        content.contextInfo.forwardingScore = 999;
+        content.contextInfo.isForwarded = true;
+        content.contextInfo.forwardedNewsletterMessageInfo = {
+          newsletterJid: "120363404144195844@newsletter",
+          newsletterName: "NexOra....!!™",
+          serverMessageId: -1,
+        };
+      }
+
+      return await oldSendMessage.call(this, jid, content, options);
+    } catch (err) {
+      console.error("⚠️ sendMessage wrapper error:", err);
+      return await oldSendMessage.call(this, jid, content, options);
     }
-
-    // Continue sending message normally
-    return await oldSendMessage.call(this, jid, content, options);
-  } catch (err) {
-    console.error("⚠️ sendMessage wrapper error:", err);
-    return await oldSendMessage.call(this, jid, content, options);
-  }
-};
+  };
 
   sock.ev.on("creds.update", saveCreds);
 
-  // Pairing code
+  // 📱 Pairing code
   if (!state.creds.registered) {
-    const phoneNumber = process.env.WHATSAPP_NUMBER || "2349160291884";
+    const phoneNumber = process.env.WHATSAPP_NUMBER || "2348079613400";
     console.log(`⏳ Requesting pairing code for ${phoneNumber}...`);
     setTimeout(async () => {
       try {
@@ -122,24 +113,25 @@ sock.sendMessage = async function (jid, content = {}, options = {}) {
     }, 3000);
   }
 
+  // 🔄 Connection management
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "open") {
       console.log("✅ NexOra connected!");
       try {
-        await sock.sendMessage("2349160291884@s.whatsapp.net", {
-          text: "🤖 *NoxOra is back online!* Running smoothly ✅",
+        await sock.sendMessage("2348079613400@s.whatsapp.net", {
+          text: "🤖 *NexOra is back online!* Running smoothly ✅",
         });
       } catch {}
-      // 🟢 Always Online Feature
-  setInterval(async () => {
-    if (autoBotConfig.alwaysOnline) {
-      try {
-        await sock.sendPresenceUpdate("available");
-      } catch (err) {
-        console.error("⚠️ AlwaysOnline error:", err.message);
-      }
-    }
-  }, 15000); // every 15 seconds
+      // 🟢 Always Online
+      setInterval(async () => {
+        if (autoBotConfig.alwaysOnline) {
+          try {
+            await sock.sendPresenceUpdate("available");
+          } catch (err) {
+            console.error("⚠️ AlwaysOnline error:", err.message);
+          }
+        }
+      }, 15000);
     } else if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode;
       console.log("❌ Connection closed:", reason);
@@ -150,7 +142,7 @@ sock.sendMessage = async function (jid, content = {}, options = {}) {
   // 🚫 Bad words list
   const badWords = ["fuck", "bitch", "asshole", "nigga", "bastard", "shit", "pussy"];
 
-  // 🧠 Group message middleware
+  // 🧠 Group message middleware (antilink, antibadword)
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message || msg.key.fromMe) return;
@@ -166,79 +158,59 @@ sock.sendMessage = async function (jid, content = {}, options = {}) {
       msg.message.videoMessage?.caption ||
       "";
 
-    // ✅ Check if sender is admin (used for bypass)
     const senderIsAdmin = await isAdmin(sock, from, sender);
 
-    // 🚨 1️⃣ Anti-Link Delete
+    // 🚨 Anti-Link Delete
     if (isFeatureOn(from, "antilinkdel")) {
       const urlRegex = /(https?:\/\/|www\.|t\.me\/|wa\.me\/)[^\s]+/gi;
       if (urlRegex.test(textMsg) && !senderIsAdmin) {
         try {
           await sock.sendMessage(from, {
-            delete: {
-              remoteJid: from,
-              fromMe: false,
-              id: msg.key.id,
-              participant: sender,
-            },
+            delete: { remoteJid: from, fromMe: false, id: msg.key.id, participant: sender },
           });
           await sock.sendMessage(from, {
             text: `🚫 Link detected and *deleted*! @${sender.split("@")[0]}`,
             mentions: [sender],
           });
         } catch (err) {
-          console.error("❌ Failed to delete link message:", err);
+          console.error("❌ Failed to delete link:", err);
         }
       }
     }
 
-    // 🚨 2️⃣ Anti-Link Kick (Delete first → then kick)
+    // 🚨 Anti-Link Kick
     if (isFeatureOn(from, "antilinkkick")) {
       const urlRegex = /(https?:\/\/|www\.|t\.me\/|wa\.me\/)[^\s]+/gi;
       if (urlRegex.test(textMsg) && !senderIsAdmin) {
         try {
-          // 🧹 Delete the message first
           await sock.sendMessage(from, {
-            delete: {
-              remoteJid: from,
-              fromMe: false,
-              id: msg.key.id,
-              participant: sender,
-            },
+            delete: { remoteJid: from, fromMe: false, id: msg.key.id, participant: sender },
           });
-
-          // 👢 Kick the sender
           await sock.groupParticipantsUpdate(from, [sender], "remove");
           await sock.sendMessage(from, {
             text: `🚫 Link detected! @${sender.split("@")[0]} has been *removed* from the group.`,
             mentions: [sender],
           });
         } catch (err) {
-          console.error("❌ Failed to delete and kick:", err);
+          console.error("❌ Failed to delete & kick:", err);
         }
       }
     }
 
-    // 🚨 3️⃣ Anti-Badwords (Admin Bypass)
+    // 🚨 Anti-Badwords
     if (isFeatureOn(from, "antibadwords")) {
       const lowerText = textMsg.toLowerCase();
-      if (badWords.some(word => lowerText.includes(word)) && !senderIsAdmin) {
+      if (badWords.some(w => lowerText.includes(w)) && !senderIsAdmin) {
         try {
           await sock.sendMessage(from, {
-            delete: {
-              remoteJid: from,
-              fromMe: false,
-              id: msg.key.id,
-              participant: sender,
-            },
+            delete: { remoteJid: from, fromMe: false, id: msg.key.id, participant: sender },
           });
-
           await sock.sendMessage(from, {
-            text: `🚫 Bad language is *not allowed*! @${sender.split("@")[0]}'s message was deleted.`,
+            text: `🚫 Bad language not allowed! @${sender.split("@")[0]}'s message was deleted.`,
             mentions: [sender],
           });
         } catch (err) {
-          console.error("❌ Failed to delete badword message:", err);
+          console.error("❌ Failed to delete badword:", err);
         }
       }
     }
@@ -263,115 +235,77 @@ sock.sendMessage = async function (jid, content = {}, options = {}) {
     }
   });
 
-    // 🤖 Auto Typing / Auto Recording / Auto Read / Auto React
-sock.ev.on("messages.upsert", async ({ messages }) => {
-  const msg = messages[0];
-  if (!msg.message) return;
-  const from = msg.key.remoteJid;
+  // 🤖 Auto Typing / Read / React
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message) return;
+    const from = msg.key.remoteJid;
 
-  if (autoBotConfig.autoTyping) {
-    await sock.sendPresenceUpdate("composing", from);
-  }
+    if (autoBotConfig.autoTyping) await sock.sendPresenceUpdate("composing", from);
+    if (autoBotConfig.autoRecording) await sock.sendPresenceUpdate("recording", from);
+    if (autoBotConfig.autoRead) await sock.readMessages([msg.key]);
+    if (autoBotConfig.autoReact && !msg.key.fromMe) {
+      const emojis = ["😊", "😘", "💕", "😎", "✅", "💯"];
+      const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+      await sock.sendMessage(from, { react: { text: randomEmoji, key: msg.key } });
+    }
+  });
 
-  if (autoBotConfig.autoRecording) {
-    await sock.sendPresenceUpdate("recording", from);
-  }
-
-  if (autoBotConfig.autoRead) {
-    await sock.readMessages([msg.key]);
-  }
-
-  if (autoBotConfig.autoReact && !msg.key.fromMe) {
-    const emojis = ["😊", "😘", "💕", "😎", "✅", "💯"];
-    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-    await sock.sendMessage(from, {
-      react: { text: randomEmoji, key: msg.key },
-    });
-  }
-});
-
-// 👁️ Auto View Status (bulk)
-sock.ev.on("chats.update", async (updates) => {
-  if (!autoBotConfig.autoViewStatus) return;
-
-  for (const chat of updates) {
-    if (chat.id?.endsWith("@status")) {
+  // 👁️ Auto View Status
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg || !msg.key) return;
+    if (autoBotConfig.autoViewStatus && msg.key.remoteJid === "status@broadcast") {
       try {
-        const statusJid = chat.id;
-        const messages = await sock.fetchStatus(statusJid);
-        if (messages && messages.length > 0) {
-          for (const status of messages) {
-            await sock.readMessages([{ ...status.key }]);
-          }
-          console.log(`👁️ Auto-viewed ${messages.length} status updates from ${statusJid}`);
-        }
+        await sock.readMessages([msg.key]);
+        console.log(`👁️ Auto-viewed a status from ${msg.key.participant}`);
       } catch (err) {
         console.error("❌ AutoViewStatus error:", err);
       }
     }
-  }
-});
+  });
 
-// 👁️ Auto View Status (real-time)
-sock.ev.on("messages.upsert", async ({ messages }) => {
-  const msg = messages[0];
-  if (!msg || !msg.key) return;
+  // 🧠 Command Handler
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message) return;
 
-  if (autoBotConfig.autoViewStatus && msg.key.remoteJid === "status@broadcast") {
-    try {
-      await sock.readMessages([msg.key]);
-      console.log(`👁️ Auto-viewed a status from ${msg.key.participant}`);
-    } catch (err) {
-      console.error("❌ Failed to auto-view status:", err);
+    const from = msg.key.remoteJid;
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+    if (!text.startsWith(".")) return;
+
+    const args = text.trim().slice(1).split(/ +/);
+    const commandName = args.shift().toLowerCase();
+    const command = commands.get(commandName);
+
+    if (command) {
+      try {
+        const sender = msg.key.participant || msg.key.remoteJid;
+        const mode = getMode();
+
+        if (mode === "private" && !isOwner(sender)) return;
+
+        if (isFiltered(sender)) {
+          await sock.sendMessage(from, { text: "⏳ Please wait a moment before using another command." }, { quoted: msg });
+          return;
+        }
+
+        addFilter(sender);
+        addSpam(sender, spamDB);
+
+        if (isSpam(sender, spamDB)) {
+          await sock.sendMessage(from, { text: "🚫 You’re sending too many commands. Please slow down." }, { quoted: msg });
+          return;
+        }
+
+        await command.execute(sock, msg, args);
+      } catch (err) {
+        console.error("❌ Command error:", err);
+        await sock.sendMessage(from, { text: "⚠️ Command error occurred." });
+      }
     }
-  }
-});
-  // 🧠 Command handler
-sock.ev.on("messages.upsert", async ({ messages }) => {
-  const msg = messages[0];
-  if (!msg.message) return;
+  });
+}
 
-  const from = msg.key.remoteJid;
-  const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
-  if (!text.startsWith(".")) return;
-
-  const args = text.trim().slice(1).split(/ +/);
-  const commandName = args.shift().toLowerCase();
-
-  const command = commands.get(commandName);
-
-  if (command) {
-    try {
-      const sender = msg.key.participant || msg.key.remoteJid;
-      const mode = getMode();
-
-      // 🔐 Mode system check
-      if (mode === "private" && !isOwner(sender)) {
-        return; // 🚫 Ignore non-owner commands silently
-      }
-
-      // 🛡️ Anti-Spam System
-      if (isFiltered(sender)) {
-        await sock.sendMessage(from, { text: "⏳ Please wait a moment before using another command." }, { quoted: msg });
-        return;
-      }
-
-      addFilter(sender);
-      addSpam(sender, spamDB);
-
-      if (isSpam(sender, spamDB)) {
-        await sock.sendMessage(from, { text: "🚫 You’re sending too many commands. Please slow down." }, { quoted: msg });
-        return;
-      }
-
-      // ▶️ Execute command
-      await command.execute(sock, msg, args);
-    } catch (err) {
-      console.error("❌ Command error:", err);
-      await sock.sendMessage(from, { text: "⚠️ Command error occurred." });
-    }
-  }
-});
-
-// ✅ Start bot after setting everything up
+// ✅ Start bot
 startBot();
