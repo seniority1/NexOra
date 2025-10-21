@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
-  "scripts": {
-    "start": "node index.js",
-    "postinstall": "apt-get update -y && apt-get install -y --no-install-recommends ffmpeg curl && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/bin/yt-dlp && chmod a+rx /usr/bin/yt-dlp && npm install --legacy-peer-deps"
-  },
+ "scripts": {
+  "start": "node index.js",
+  "postinstall": "apt-get update -y && apt-get install -y --no-install-recommends ffmpeg curl && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o ./yt-dlp && chmod a+rx ./yt-dlp && npm install --legacy-peer-deps"
+}
+
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.4",
     "adm-zip": "^0.5.10",
