@@ -1,41 +1,45 @@
 import fs from 'fs'
-import { downloadContentFromMessage, proto } from '@whiskeysockets/baileys'
 
-/**
- * Export all group members to a .vcf file
- */
-export async function handleExportVcf(sock, m) {
-  const from = m.key.remoteJid
+export default {
+  name: "exportvcf",
+  description: "Export all group members as a .vcf contact file",
+  async execute(sock, msg) {
+    const from = msg.key.remoteJid
 
-  // Only works in groups
-  if (!from.endsWith('@g.us')) {
-    await sock.sendMessage(from, { text: '❌ This command only works in groups.' }, { quoted: m })
-    return
-  }
+    // Only works in groups
+    if (!from.endsWith('@g.us')) {
+      await sock.sendMessage(from, { text: '❌ This command only works in groups.' }, { quoted: msg })
+      return
+    }
 
-  // Fetch group metadata
-  const metadata = await sock.groupMetadata(from)
-  const participants = metadata.participants
+    // Fetch group metadata
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants
 
-  // Build VCF data
-  let vcf = ''
-  for (const p of participants) {
-    const jid = p.id
-    const phone = jid.split('@')[0]
-    vcf += `BEGIN:VCARD\nVERSION:3.0\nFN:WA ${phone}\nTEL;type=CELL;type=VOICE;waid=${phone}:+${phone}\nEND:VCARD\n`
-  }
+    // Build VCF data
+    let vcf = ''
+    for (const p of participants) {
+      const jid = p.id
+      const phone = jid.split('@')[0]
+      vcf += `BEGIN:VCARD\nVERSION:3.0\nFN:WA ${phone}\nTEL;type=CELL;type=VOICE;waid=${phone}:+${phone}\nEND:VCARD\n`
+    }
 
-  // Save locally
-  const filePath = `./group_${metadata.subject.replace(/[^\w\s]/gi, '')}_contacts.vcf`
-  fs.writeFileSync(filePath, vcf, 'utf-8')
+    // Save locally
+    const safeName = metadata.subject.replace(/[^\w\s]/gi, '').trim() || 'group'
+    const filePath = `./group_${safeName}_contacts.vcf`
+    fs.writeFileSync(filePath, vcf, 'utf-8')
 
-  // Send file back
-  await sock.sendMessage(from, {
-    document: fs.readFileSync(filePath),
-    mimetype: 'text/vcard',
-    fileName: `${metadata.subject}.vcf`
-  }, { quoted: m })
+    // Send status message
+    await sock.sendMessage(from, { text: `📦 Found ${participants.length} contacts.\n📤 Sending ${metadata.subject}.vcf ...` }, { quoted: msg })
 
-  // Optional: cleanup file
-  fs.unlinkSync(filePath)
+    // Send the VCF file
+    await sock.sendMessage(from, {
+      document: fs.readFileSync(filePath),
+      mimetype: 'text/vcard',
+      fileName: `${metadata.subject}.vcf`
+    }, { quoted: msg })
+
+    // Cleanup
+    fs.unlinkSync(filePath)
+  },
 }
