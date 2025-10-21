@@ -16,6 +16,8 @@ import { getMode } from "./utils/mode.js";
 import { isOwner } from "./utils/isOwner.js";
 import { games, sendBoard } from "./commands/tictactoe.js";
 import { isFiltered, addFilter, isSpam, addSpam, resetSpam } from "./utils/antispam.js";
+import checkDependencies from "./utils/checkDependencies.js";
+checkDependencies();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
