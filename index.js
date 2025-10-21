@@ -14,6 +14,7 @@ import { isAdmin } from "./utils/isAdmin.js";
 import { autoBotConfig } from "./utils/autobot.js";
 import { getMode } from "./utils/mode.js";
 import { isOwner } from "./utils/isOwner.js";
+import { games, sendBoard } from "./commands/tictactoe.js";
 import { isFiltered, addFilter, isSpam, addSpam, resetSpam } from "./utils/antispam.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -100,7 +101,7 @@ async function startBot() {
 
   // 📱 Pairing code
   if (!state.creds.registered) {
-    const phoneNumber = process.env.WHATSAPP_NUMBER || "2348079613400";
+    const phoneNumber = process.env.WHATSAPP_NUMBER || "2349160291884";
     console.log(`⏳ Requesting pairing code for ${phoneNumber}...`);
     setTimeout(async () => {
       try {
@@ -118,7 +119,7 @@ async function startBot() {
     if (connection === "open") {
       console.log("✅ NexOra connected!");
       try {
-        await sock.sendMessage("2348079613400@s.whatsapp.net", {
+        await sock.sendMessage("2349160291884@s.whatsapp.net", {
           text: "🤖 *NexOra is back online!* Running smoothly ✅",
         });
       } catch {}
@@ -305,6 +306,42 @@ async function startBot() {
       }
     }
   });
+  // 🎮 TicTacToe Button Handler
+sock.ev.on("messages.upsert", async ({ messages }) => {
+  const msg = messages[0];
+  if (!msg?.message?.buttonsResponseMessage) return;
+
+  const chatId = msg.key.remoteJid;
+  const sender = msg.key.participant || msg.key.remoteJid;
+  const buttonId = msg.message.buttonsResponseMessage.selectedButtonId;
+
+  const gameData = games[chatId];
+  if (!gameData) return;
+
+  const { game } = gameData;
+  const move = parseInt(buttonId.split("_")[1]);
+
+  const player = sender === game.playerX ? 0 : sender === game.playerO ? 1 : -1;
+  if (player === -1)
+    return sock.sendMessage(chatId, { text: "🚫 You're not in this game!" });
+
+  const result = game.turn(player, move);
+  if (result <= 0)
+    return sock.sendMessage(chatId, { text: "❌ Invalid move!" });
+
+  await sendBoard(sock, chatId, game, msg);
+
+  if (game.winner) {
+    await sock.sendMessage(chatId, {
+      text: `🏆 *@${game.winner.split("@")[0]}* wins!`,
+      mentions: [game.winner],
+    });
+    delete games[chatId];
+  } else if (game.board === 511) {
+    await sock.sendMessage(chatId, { text: "😐 It’s a draw!" });
+    delete games[chatId];
+  }
+});
 }
 
 // ✅ Start bot
