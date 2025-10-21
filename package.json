@@ -18,6 +18,12 @@
     "pino": "^8.17.0",
     "qrcode": "^1.5.3",
     "node-fetch": "^3.3.2",
-    "mumaker": "^2.0.0"
+    "mumaker": "^2.0.0",
+
+    "youtubedl-core": "^4.11.5",
+    "youtube-yts": "^3.0.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "node-id3": "^0.3.6",
+    "node-youtube-music": "^1.4.1"
   }
 }
