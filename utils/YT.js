@@ -1,4 +1,3 @@
-// utils/YT.js
 import ytdl from "youtubedl-core"
 import yts from "youtube-yts"
 import ffmpeg from "fluent-ffmpeg"
@@ -7,9 +6,17 @@ import fs from "fs"
 import { randomBytes } from "crypto"
 import ytM from "node-youtube-music"
 
-const ytIdRegex = /(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})/
+const ytIdRegex =
+  /(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})/
 
 class YT {
+  static ensureDir() {
+    const dir = "./XeonMedia/audio"
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+    }
+  }
+
   static isYTUrl(url) {
     return ytIdRegex.test(url)
   }
@@ -54,6 +61,7 @@ class YT {
   }
 
   static async downloadMusic(query) {
+    this.ensureDir()
     const tracks = await this.searchTrack(query)
     const song = tracks[0]
     const info = await ytdl.getInfo(song.url)
@@ -79,6 +87,7 @@ class YT {
   }
 
   static async mp3(url, metadata = {}, autoTag = false) {
+    this.ensureDir()
     const videoUrl = this.isYTUrl(url)
       ? `https://www.youtube.com/watch?v=${this.getVideoID(url)}`
       : url
