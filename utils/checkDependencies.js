@@ -1,5 +1,13 @@
+// utils/checkDependencies.js
 import { execSync } from "child_process";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const BIN_DIR = path.join(__dirname, "../bin");
+const YTDLP_PATH = path.join(BIN_DIR, "yt-dlp");
 
 function isInstalled(cmd) {
   try {
@@ -11,32 +19,32 @@ function isInstalled(cmd) {
 }
 
 function installYtDlp() {
-  console.log("📦 Installing yt-dlp...");
-  execSync(
-    "curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/bin/yt-dlp && chmod a+rx /usr/bin/yt-dlp",
-    { stdio: "inherit" }
-  );
+  console.log("📦 Installing yt-dlp (local copy)...");
+  if (!fs.existsSync(BIN_DIR)) fs.mkdirSync(BIN_DIR);
+  execSync(`curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o "${YTDLP_PATH}"`);
+  execSync(`chmod +x "${YTDLP_PATH}"`);
 }
 
 function installFfmpeg() {
-  console.log("📦 Installing ffmpeg...");
-  execSync("apt-get update -y && apt-get install -y ffmpeg", { stdio: "inherit" });
+  console.log("📦 Checking ffmpeg...");
+  try {
+    execSync("ffmpeg -version", { stdio: "ignore" });
+    console.log("✅ ffmpeg already installed");
+  } catch {
+    console.warn("⚠️ ffmpeg not found — please install it in your host or container manually.");
+  }
 }
 
 export default function checkDependencies() {
   console.log("🔍 Checking system dependencies...");
 
-  if (!isInstalled("yt-dlp")) {
+  if (!fs.existsSync(YTDLP_PATH)) {
     installYtDlp();
   } else {
-    console.log("✅ yt-dlp already installed");
+    console.log("✅ Local yt-dlp found");
   }
 
-  if (!isInstalled("ffmpeg")) {
-    installFfmpeg();
-  } else {
-    console.log("✅ ffmpeg already installed");
-  }
+  installFfmpeg();
 
   console.log("🚀 All dependencies verified!");
 }
