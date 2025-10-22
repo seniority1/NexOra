@@ -18,6 +18,18 @@ import { games, sendBoard } from "./commands/tictactoe.js";
 import { isFiltered, addFilter, isSpam, addSpam, resetSpam } from "./utils/antispam.js";
 import checkDependencies from "./utils/checkDependencies.js";
 checkDependencies();
+// 🍪 Auto-refresh YouTube cookies
+import { refreshCookies } from "./utils/refreshCookies.js";
+
+// Refresh cookies every 7 days
+setInterval(() => {
+  refreshCookies().catch(err => console.error("Failed to refresh cookies:", err));
+}, 7 * 24 * 60 * 60 * 1000);
+
+// Refresh on startup if cookies.txt missing
+if (!fs.existsSync("cookies.txt")) {
+  refreshCookies().catch(err => console.error("Initial cookie refresh failed:", err));
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
