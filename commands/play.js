@@ -39,8 +39,13 @@ export default {
         caption: `🎧 *${video.title}*\n🕒 Duration: ${video.timestamp}\n👤 Channel: ${video.author.name}\n📺 [Watch on YouTube](${video.url})\n\n⏳ *Downloading audio...*\n\n⚡ *Powered by NexOra*`,
       }, { quoted: msg });
 
+      // ⚙️ Check if cookies file exists
+      const cookiesPath = path.resolve("cookies.txt");
+      const ytDlpCmd = fs.existsSync(cookiesPath)
+        ? `yt-dlp --cookies "${cookiesPath}" -x --audio-format mp3 -o "${outputFile}" "${video.url}"`
+        : `yt-dlp -x --audio-format mp3 -o "${outputFile}" "${video.url}"`;
+
       // 📥 Download MP3 using yt-dlp
-      const ytDlpCmd = `yt-dlp -x --audio-format mp3 -o "${outputFile}" "${video.url}"`;
       await new Promise((resolve, reject) => {
         exec(ytDlpCmd, (error, stdout, stderr) => {
           if (error) {
@@ -60,12 +65,12 @@ export default {
         caption: `🎶 *${video.title}*\n\n⚡ *Powered by NexOra*`,
       }, { quoted: msg });
 
-      // 🧹 Clean up the file after sending
+      // 🧹 Clean up
       setTimeout(() => {
         fs.unlink(outputFile, (err) => {
           if (err) console.error("Failed to delete file:", err);
         });
-      }, 15_000);
+      }, 15000);
 
     } catch (err) {
       console.error("❌ play (yt-dlp) error:", err);
