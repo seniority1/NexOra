@@ -183,6 +183,37 @@ export default {
 │ 🤖 .ai <prompt>
 └─────────────────────────┘
 
+🧰 *MISC* 🧰
+┌─────────────────────────┐
+│ 🖼️ Avatar-based effects
+│ • .misc heart
+│ • .misc horny
+│ • .misc circle
+│ • .misc lgbt
+│ • .misc lied
+│ • .misc lolice
+│ • .misc simpcard
+│ • .misc tonikawa
+│
+│ 🐶 Meme Templates
+│ • .misc its-so-stupid <text>
+│ • .misc namecard username|birthday|description(optional)
+│ • .misc oogway <quote>
+│ • .misc oogway2 <quote>
+│
+│ 🐦 Social Templates
+│ • .misc tweet displayname|username|comment|theme(optional light/dark)
+│ • .misc youtube-comment username|comment
+│
+│ 🌈 Overlay Effects
+│ • .misc comrade
+│ • .misc gay
+│ • .misc glass
+│ • .misc jail
+│ • .misc passed
+│ • .misc triggered
+└─────────────────────────┘
+
 📌 *Channel:*  
 https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
 `;
