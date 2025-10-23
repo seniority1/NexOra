@@ -22,7 +22,6 @@
     "node-id3": "^0.2.9",
     "node-youtube-music": "^0.10.3",
     "pino": "^8.17.0",
-    "puppeteer": "^24.19.0",
     "qrcode": "^1.5.3",
     "youtube-yts": "^2.0.0",
     "yt-search": "^2.13.1",
