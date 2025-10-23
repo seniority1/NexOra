@@ -7,6 +7,8 @@ export default {
   async execute(sock, msg, args) {
     try {
       const chatId = msg.key.remoteJid;
+
+      // Extract user text or quoted text
       const rawText =
         msg.message?.conversation?.trim() ||
         msg.message?.extendedTextMessage?.text?.trim() ||
@@ -34,16 +36,31 @@ export default {
         return;
       }
 
+      // ✂️ Auto-trim if too long (1000 words)
+      let prompt = input.trim();
+      const words = prompt.split(/\s+/);
+      if (words.length > 1000) {
+        prompt = words.slice(0, 1000).join(" ");
+        await sock.sendMessage(
+          chatId,
+          {
+            text: "⚠️ Your prompt was too long, so it was trimmed to 1000 words for better performance.",
+          },
+          { quoted: msg }
+        );
+      }
+
+      // Inform user
       await sock.sendMessage(
         chatId,
-        { text: "🎥 Generating video, please wait..." },
+        { text: "🎥 Generating your AI video, please wait..." },
         { quoted: msg }
       );
 
-      // ✅ POST request supports long text safely
+      // ✅ POST request (better for long text)
       const { data } = await axios.post(
         "https://okatsu-rolezapiiz.vercel.app/ai/txt2video",
-        { text: input },
+        { text: prompt },
         {
           timeout: 60000,
           headers: { "Content-Type": "application/json" },
@@ -57,12 +74,15 @@ export default {
         throw new Error("Invalid or missing video URL");
       }
 
+      // 💎 WhatsApp caption formatting with quotes (blur effect)
+      const caption = `🎬 *Prompt:*\n> ${prompt}\n\n> Powered by NexOra`;
+
       await sock.sendMessage(
         chatId,
         {
           video: { url: videoUrl },
           mimetype: "video/mp4",
-          caption: `🎬 *Prompt:* ${input}`,
+          caption,
         },
         { quoted: msg }
       );
@@ -71,7 +91,7 @@ export default {
       await sock.sendMessage(
         msg.key.remoteJid,
         {
-          text: "❌ Failed to generate video. Try again later.",
+          text: "❌ Failed to generate video. Please try again later.",
         },
         { quoted: msg }
       );
