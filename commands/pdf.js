@@ -1,32 +1,65 @@
 import fs from "fs";
-import pdf from "html-pdf";
+import PDFDocument from "pdfkit";
 
 export default {
   name: "pdf",
-  description: "Convert text or webpage to PDF",
+  description: "Convert text to a downloadable PDF",
   async execute(sock, msg, args) {
-    const input = args.join(" ");
-    if (!input)
-      return await sock.sendMessage(msg.key.remoteJid, {
-        text: "📄 *Usage:* .pdf <text or URL>",
-      });
+    const from = msg.key.remoteJid;
+    const inputText = args.join(" ");
 
-    const content = input.startsWith("http")
-      ? `<iframe src="${input}" style="width:100%;height:100vh;"></iframe>`
-      : `<div style='font-size:16px;'>${input}</div>`;
+    // If no text provided, show usage guide
+    if (!inputText) {
+      return sock.sendMessage(
+        from,
+        {
+          text: `
+📘 *PDF Command Usage:*
+> Create a PDF file from your text.
 
-    const filePath = "./temp.pdf";
-    pdf.create(content).toFile(filePath, async (err) => {
-      if (err) {
-        return await sock.sendMessage(msg.key.remoteJid, { text: "❌ Failed to create PDF." });
-      }
-      await sock.sendMessage(msg.key.remoteJid, {
-        document: { url: filePath },
-        mimetype: "application/pdf",
-        fileName: "NexOra.pdf",
-        caption: "📄 Your PDF file is ready!",
-      });
+🧩 *Example:*
+.pdf This is my first NexOra PDF! 📄
+          `.trim(),
+        },
+        { quoted: msg }
+      );
+    }
+
+    try {
+      // ✅ Create a unique filename
+      const filePath = `./temp_${Date.now()}.pdf`;
+
+      // ✅ Create the PDF
+      const doc = new PDFDocument();
+      const writeStream = fs.createWriteStream(filePath);
+      doc.pipe(writeStream);
+      doc.fontSize(14).text(inputText, { align: "left" });
+      doc.end();
+
+      // Wait for file to finish writing
+      await new Promise((resolve) => writeStream.on("finish", resolve));
+
+      // ✅ Send the PDF
+      await sock.sendMessage(
+        from,
+        {
+          document: fs.readFileSync(filePath),
+          mimetype: "application/pdf",
+          fileName: "NexOra.pdf",
+          caption: "📄 Here’s your generated PDF!",
+        },
+        { quoted: msg }
+      );
+
+      // Delete file after sending
       fs.unlinkSync(filePath);
-    });
+    } catch (err) {
+      console.error("PDF command error:", err);
+      await sock.sendMessage(
+        from,
+        { text: "❌ Failed to generate PDF. Please try again." },
+        { quoted: msg }
+      );
+    }
   },
 };
