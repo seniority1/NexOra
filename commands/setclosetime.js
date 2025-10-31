@@ -3,7 +3,7 @@ import { isAdmin } from "../utils/isAdmin.js";
 
 export default {
   name: "setclosetime",
-  description: "Set group close timer (Admin only)",
+  description: "Set group auto-close (and optional reopen) timer (Admin only)",
   async execute(sock, msg, args) {
     const groupId = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -21,44 +21,71 @@ export default {
       return;
     }
 
-    // ✅ Parse time argument
-    const timeInput = args[0];
-    if (!timeInput) {
+    // ✅ Example usage
+    if (args.length === 0) {
       await sock.sendMessage(
         groupId,
-        { text: "⏰ Usage: *.setclosetime <number><s/m/h>*\n\nExample:\n.setclosetime 30s\n.setclosetime 10m\n.setclosetime 1h" },
+        {
+          text: `⏰ Usage:
+*.setclosetime <closeTime> [open <openTime>]*
+
+Examples:
+• .setclosetime 10m
+• .setclosetime 30s open 10m
+• .setclosetime 1h open 2h`
+        },
         { quoted: msg }
       );
       return;
     }
 
-    // ✅ Convert time to milliseconds
-    const time = parseTime(timeInput);
-    if (!time) {
-      await sock.sendMessage(groupId, { text: "⚠️ Invalid time format. Use like `30s`, `10m`, or `1h`." }, { quoted: msg });
+    // ✅ Parse arguments
+    const closeInput = args[0];
+    const openIndex = args.findIndex(a => a.toLowerCase() === "open");
+    const openInput = openIndex !== -1 ? args[openIndex + 1] : null;
+
+    const closeTime = parseTime(closeInput);
+    const openTime = openInput ? parseTime(openInput) : null;
+
+    if (!closeTime) {
+      await sock.sendMessage(groupId, { text: "⚠️ Invalid close time format. Use like `10s`, `5m`, or `1h`." }, { quoted: msg });
+      return;
+    }
+    if (openIndex !== -1 && !openTime) {
+      await sock.sendMessage(groupId, { text: "⚠️ Invalid open time format. Use like `10s`, `5m`, or `1h`." }, { quoted: msg });
       return;
     }
 
-    // ✅ Acknowledge
-    await sock.sendMessage(
-      groupId,
-      { text: `✅ Group will be *closed* in ${timeInput} 🔒` },
-      { quoted: msg }
-    );
+    // ✅ Confirm action
+    let confirmMsg = `✅ Group will be *closed* in ${closeInput}`;
+    if (openTime) confirmMsg += ` and *reopened* after ${openInput}`;
+    await sock.sendMessage(groupId, { text: confirmMsg + " 🔒" }, { quoted: msg });
 
-    // ⏳ Wait and then close
+    // ⏳ Close group after timer
     setTimeout(async () => {
       try {
-        await sock.groupSettingUpdate(groupId, "announcement"); // close group
-        await sock.sendMessage(groupId, { text: "🚫 Group has been *closed* automatically by timer." });
+        await sock.groupSettingUpdate(groupId, "announcement");
+        await sock.sendMessage(groupId, { text: "🚫 Group has been *closed automatically* 🔒" });
+
+        // If reopen time provided
+        if (openTime) {
+          setTimeout(async () => {
+            try {
+              await sock.groupSettingUpdate(groupId, "not_announcement");
+              await sock.sendMessage(groupId, { text: "✅ Group has been *reopened automatically* 🔓" });
+            } catch (err) {
+              console.error("Error reopening group:", err);
+            }
+          }, openTime);
+        }
       } catch (err) {
         console.error("Error closing group:", err);
       }
-    }, time);
+    }, closeTime);
   },
 };
 
-// Helper: convert time input like 10s, 5m, 1h to milliseconds
+// 🧮 Helper — convert time string (10s/5m/1h) to ms
 function parseTime(str) {
   const match = str.match(/^(\d+)(s|m|h)$/i);
   if (!match) return null;
@@ -69,6 +96,5 @@ function parseTime(str) {
   if (unit === "s") return value * 1000;
   if (unit === "m") return value * 60 * 1000;
   if (unit === "h") return value * 60 * 60 * 1000;
-
   return null;
 }
