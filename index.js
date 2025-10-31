@@ -10,7 +10,7 @@ import makeWASocket, {
 import pino from "pino";
 import { fileURLToPath } from "url";
 import config from "./config.js"; // 🧠 Import config
-import { isFeatureOn } from "./utils/settings.js";
+import { isFeatureOn, getSetting } from "./utils/settings.js";
 import { isAdmin } from "./utils/isAdmin.js";
 import { autoBotConfig } from "./utils/autobot.js";
 import { getMode } from "./utils/mode.js";
@@ -104,7 +104,7 @@ async function startBot() {
 
   // 📱 Pairing code
   if (!state.creds.registered) {
-    const phoneNumber = process.env.WHATSAPP_NUMBER || config.ownerNumber; // 👈 use config.js
+    const phoneNumber = process.env.WHATSAPP_NUMBER || config.ownerNumber;
     console.log(`⏳ Requesting pairing code for ${phoneNumber}...`);
     setTimeout(async () => {
       try {
@@ -216,6 +216,68 @@ async function startBot() {
         } catch (err) {
           console.error("❌ Failed to delete badword:", err);
         }
+      }
+    }
+  });
+
+  // 👁️‍🗨️ Anti-Delete Handler (with Media Recovery)
+  sock.ev.on("messages.update", async (updates) => {
+    for (const update of updates) {
+      try {
+        if (update.messageStubType !== 91) continue;
+        const jid = update.key.remoteJid;
+        if (!jid.endsWith("@g.us")) continue;
+
+        const setting = getSetting(jid);
+        if (!setting.antidelete) continue;
+
+        const deletedKey = update.key;
+        const deletedMsg = await sock.loadMessage(jid, deletedKey.id);
+        if (!deletedMsg?.message) continue;
+
+        const sender = deletedMsg.key.participant || deletedMsg.key.remoteJid;
+        const name = sender.split("@")[0];
+        const msgType = Object.keys(deletedMsg.message)[0];
+
+        await sock.sendMessage(
+          jid,
+          {
+            text: `⚠️ *Anti-Delete Activated!*\n\n👤 *Sender:* @${name}\n🗂️ *Type:* ${msgType}\n\n📩 Message recovered below 👇`,
+            mentions: [sender],
+          }
+        );
+
+        if (
+          msgType === "imageMessage" ||
+          msgType === "videoMessage" ||
+          msgType === "audioMessage" ||
+          msgType === "stickerMessage" ||
+          msgType === "documentMessage"
+        ) {
+          const buffer = await sock.downloadMediaMessage(deletedMsg);
+          const tempFile = `./temp_${Date.now()}.bin`;
+          fs.writeFileSync(tempFile, buffer);
+
+          await sock.sendMessage(
+            jid,
+            {
+              [msgType.replace("Message", "")]: { url: tempFile },
+              caption:
+                deletedMsg.message[msgType].caption || "Recovered deleted media 🗂️",
+            },
+            { quoted: deletedMsg }
+          );
+
+          fs.unlinkSync(tempFile);
+        } else {
+          const text =
+            deletedMsg.message.conversation ||
+            deletedMsg.message.extendedTextMessage?.text ||
+            "🗒️ (Non-text message)";
+          await sock.sendMessage(jid, { text }, { quoted: deletedMsg });
+        }
+      } catch (err) {
+        console.error("❌ AntiDelete Error:", err);
       }
     }
   });
