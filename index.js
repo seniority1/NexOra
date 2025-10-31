@@ -222,6 +222,25 @@ async function startBot() {
         }
       }
     }
+
+    // ⚙️ COMMAND HANDLER
+    const prefix = ".";
+    if (!textMsg.startsWith(prefix)) return;
+
+    const args = textMsg.slice(prefix.length).trim().split(/ +/);
+    const commandName = args.shift().toLowerCase();
+
+    if (commands.has(commandName)) {
+      const cmd = commands.get(commandName);
+
+      try {
+        await cmd.execute(sock, msg, args, from, sender);
+        console.log(`✅ Executed command: ${commandName} by ${sender}`);
+      } catch (err) {
+        console.error(`❌ Error executing ${commandName}:`, err);
+        await sock.sendMessage(from, { text: "⚠️ An error occurred while running that command." });
+      }
+    }
   });
 
   // (Remaining parts unchanged — Anti-Delete, Welcome, Auto features, Command Handler, TicTacToe)
