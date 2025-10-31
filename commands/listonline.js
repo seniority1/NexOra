@@ -1,67 +1,53 @@
+// commands/listonline.js
 import { isAdmin } from "../utils/isAdmin.js";
 
 export default {
   name: "listonline",
-  description: "List all currently online members in the group",
-  async execute(sock, msg) {
-    const from = msg.key.remoteJid;
-    const botName = "NexOra";
+  description: "Show currently online members in the group (Admin only)",
+  async execute(sock, msg, args) {
+    const groupId = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
 
-    // ✅ Group only
-    if (!from.endsWith("@g.us")) {
-      return sock.sendMessage(from, { text: "⚠️ This command only works inside groups." }, { quoted: msg });
+    // ✅ Only works in groups
+    if (!groupId.endsWith("@g.us")) {
+      await sock.sendMessage(groupId, { text: "⚠️ This command only works in groups." }, { quoted: msg });
+      return;
     }
 
-    // ✅ Admin only
-    if (!(await isAdmin(sock, from, sender))) {
-      return sock.sendMessage(from, { text: "❌ Only *group admins* can use this command." }, { quoted: msg });
+    // ✅ Admin check
+    const admin = await isAdmin(sock, groupId, sender);
+    if (!admin) {
+      await sock.sendMessage(groupId, { text: "❌ Only *group admins* can use this command." }, { quoted: msg });
+      return;
     }
 
     try {
-      // ✅ Fetch presence info (active users)
-      const groupMetadata = await sock.groupMetadata(from);
-      const participants = groupMetadata.participants;
+      // 🧠 Fetch group metadata
+      const groupMetadata = await sock.groupMetadata(groupId);
+      const participants = groupMetadata.participants.map(p => p.id);
 
-      // Some Baileys versions don't provide real presence per user,
-      // but we can use `sock.fetchStatus` for each to check quickly
-      let onlineList = [];
-      for (const p of participants) {
-        const presence = sock.presence?.[p.id];
-        if (presence && presence.lastKnownPresence === "available") {
-          onlineList.push(p.id);
+      // 👁️ Get online presence from the socket store
+      const store = sock.store?.presence || {};
+      const onlineUsers = [];
+
+      for (const user of participants) {
+        const presence = store[groupId]?.[user]?.lastKnownPresence || "unavailable";
+        if (presence === "available" || presence === "composing" || presence === "recording") {
+          onlineUsers.push(user);
         }
       }
 
-      // If no presence tracking → fallback (empty or show everyone)
-      if (onlineList.length === 0) {
-        onlineList = participants.map((p) => p.id);
+      // 🧾 Create message
+      if (onlineUsers.length === 0) {
+        await sock.sendMessage(groupId, { text: "📵 No one is online right now." }, { quoted: msg });
+      } else {
+        const list = onlineUsers.map((jid, i) => `${i + 1}. @${jid.split("@")[0]}`).join("\n");
+        const text = `🟢 *Online Members:*\n\n${list}\n\n👥 Total: *${onlineUsers.length}*`;
+        await sock.sendMessage(groupId, { text, mentions: onlineUsers }, { quoted: msg });
       }
-
-      const onlineText = onlineList
-        .map((id, i) => `*${i + 1}.* @${id.split("@")[0]}`)
-        .join("\n");
-
-      const text = `
-┏━━🟢 *${botName.toUpperCase()} BOT* ━━┓
-       👥 *ONLINE MEMBERS LIST* 👥
-
-${onlineText || "No one is online 😴"}
-
-┗━━━━━━━━━━━━━━━━━━━━┛
-      `;
-
-      await sock.sendMessage(
-        from,
-        {
-          text: text.trim(),
-          mentions: onlineList,
-        },
-        { quoted: msg }
-      );
     } catch (err) {
       console.error("❌ listonline error:", err);
-      await sock.sendMessage(from, { text: "❌ Failed to list online members." }, { quoted: msg });
+      await sock.sendMessage(groupId, { text: "⚠️ Failed to fetch online list." }, { quoted: msg });
     }
   },
 };
