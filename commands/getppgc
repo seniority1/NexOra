@@ -1,0 +1,21 @@
+// commands/getppgc.js
+export default {
+  name: "getppgc",
+  description: "Get the group’s profile picture (Admin only)",
+  async execute(sock, msg) {
+    const groupId = msg.key.remoteJid;
+
+    // ✅ Check if command used in a group
+    if (!groupId.endsWith("@g.us")) {
+      await sock.sendMessage(groupId, { text: "⚠️ This command only works in *groups*." }, { quoted: msg });
+      return;
+    }
+
+    try {
+      const ppUrl = await sock.profilePictureUrl(groupId, "image");
+      await sock.sendMessage(groupId, { image: { url: ppUrl }, caption: "🖼️ *Group Profile Picture*" }, { quoted: msg });
+    } catch {
+      await sock.sendMessage(groupId, { text: "❌ No profile picture found for this group." }, { quoted: msg });
+    }
+  },
+};
