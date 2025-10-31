@@ -28,7 +28,7 @@ export default {
     const runtime = formatRuntime(Date.now() - startTime);
     const mode = getMode().toUpperCase();
 
-    const menu = `
+  const menu = `
 ╔══════════════════════════╗
 ║ 🤖  *NexOra Bot Menu*  ║
 ╠══════════════════════════╣
@@ -48,6 +48,8 @@ export default {
 │ ⏰ .time
 │ 👤 .owner
 │ 👑 .myjid (Owner Only)
+│ 💖 .love
+│ 💥 .dare
 │ 📜 .rules
 │ 💡 .fact
 │ 😂 .joke
@@ -72,6 +74,8 @@ export default {
 │ ⏰ .remind
 │ 🛰️ .ipinfo
 │ 💾 .save
+│ 📄 .pdf <text/url>
+│ ⚡ .speedtest
 │ 🕵️ .vv2
 └─────────────────────────┘
 
@@ -81,6 +85,8 @@ export default {
 │ 📘 .fb <link>
 │ ▶️ .yt <link>
 │ 📸 .ig <link>
+│ 🎬 .movie <name>
+│ 🎶 .lyrics <song>
 └─────────────────────────┘
 
 ⚡ *OWNER COMMANDS* ⚡
@@ -90,6 +96,7 @@ export default {
 │ 🧾 .blockedlist
 │ 🧼 .clearchats
 │ 🌍 .update
+│ 📦 .backup
 │ 📝 .setproname <name>
 │ 🧠 .setbio <text>
 │ 🖼️ .setpropic (reply img)
@@ -101,6 +108,7 @@ export default {
 │ 💬 .broadcastchat <text>
 │ 📂 .allgroups
 │ 📡 .allchannels
+│ 🔗 .join <link>
 └─────────────────────────┘
 
 ⚙️ *BOT SETTINGS (OWNER ONLY)* ⚙️
@@ -216,7 +224,23 @@ export default {
 
 📌 *Channel:*  
 https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
+
+> 🧠 Powered by *NexOra*  
+> 👑 Created by *Seniority*
 `;
+    await sock.sendMessage(
+      from,
+      {
+        image: {
+          url: "https://raw.githubusercontent.com/iamedale/My-boy-asset/main/file_00000000044862438fca96d9cf92f1ca.png",
+        },
+        caption: menu.trim(),
+      },
+      { quoted: msg }
+    );
+  },
+};
+
 
     await sock.sendMessage(
       from,
