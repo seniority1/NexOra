@@ -79,6 +79,8 @@ export default {
 │ 🕵️ .vv2
 │ 🖼️ .getppgc
 │ 🖼️ .getpp
+│ 🖼️ .getppme
+│ 🖼️ .getppbot
 └─────────────────────────
 
 📥 *DOWNLOADER* 📥
@@ -155,6 +157,7 @@ export default {
 │ 🦵 .kickinactive
 │ 📃 .listactive
 │ 📃 .listinactive
+│ 🛡️ .setclosetime
 └─────────────────────────┘
 
 🧨 *EVIL MENU* 🧨
@@ -227,26 +230,21 @@ export default {
 │ 🤖 .ai <prompt>
 └─────────────────────────┘
 
+🧠 *AI FEATURES* 🧠
+┌─────────────────────────┐
+│ 🎨 .imagine <prompt>
+│ 🖼️ .variation (reply image)
+│ 📝 .caption (reply img/video)
+│ 🎶 .lyrics <song>
+│ 🎬 .aivideoidea <topic>
+└─────────────────────────┘
+
 📌 *Channel:*  
 https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
 
 > 🧠 Powered by *NexOra*  
 > 👑 Created by *Seniority*
 `;
-    await sock.sendMessage(
-      from,
-      {
-        image: {
-          url: "https://raw.githubusercontent.com/iamedale/My-boy-asset/main/file_00000000044862438fca96d9cf92f1ca.png",
-        },
-        caption: menu.trim(),
-      },
-      { quoted: msg }
-    );
-  },
-};
-
-
     await sock.sendMessage(
       from,
       {
