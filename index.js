@@ -248,6 +248,26 @@ async function startBot() {
   });
 
   // ---------------------------
+  // 📸 Auto Status Reaction 💚
+  // ---------------------------
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const autoReact = getSetting("autostatreact");
+    if (!autoReact) return;
+
+    const msg = messages?.[0];
+    if (!msg || msg.key.remoteJid !== "status@broadcast") return;
+
+    try {
+      await sock.sendMessage(msg.key.participant, {
+        react: { text: "💚", key: msg.key },
+      });
+      console.log("💚 Auto-reacted to a status!");
+    } catch (err) {
+      console.error("⚠️ Auto react error:", err);
+    }
+  });
+
+  // ---------------------------
   // Anti-Delete, Welcome, Goodbye (unchanged)
   // ---------------------------
   sock.ev.on("messages.update", async (updates) => {
