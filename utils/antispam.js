@@ -41,3 +41,4 @@ export function isSpam(groupId, sender) {
   const u = db.find((x) => x.id === sender);
   return u ? u.spam >= 6 : false;
 }
+export { spamDB };
