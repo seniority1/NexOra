@@ -226,19 +226,18 @@ async function startBot() {
 
         if (mode === "private" && !isOwnerUser && isGroup) return;
 
-        if (isFiltered(sender)) {
-          await sock.sendMessage(from, { text: "⏳ Please wait before using another command." }, { quoted: msg });
-          return;
-        }
+        if (isFiltered(from, sender)) {
+  await sock.sendMessage(from, { text: "⏳ Please wait before using another command." }, { quoted: msg });
+  return;
+}
 
-        addFilter(sender);
-        addSpam(sender, spamDB);
+addFilter(from, sender);
+addSpam(from, sender, spamDB);
 
-        if (isSpam(sender, spamDB)) {
-          await sock.sendMessage(from, { text: "🚫 Too many commands. Please slow down." }, { quoted: msg });
-          return;
-        }
-
+if (isSpam(from, sender, spamDB)) {
+  await sock.sendMessage(from, { text: "🚫 Too many commands. Please slow down." }, { quoted: msg });
+  return;
+}
         await command.execute(sock, msg, args, from, sender);
         console.log(`✅ Command executed: ${commandName} by ${sender}`);
       }
