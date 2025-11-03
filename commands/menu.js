@@ -2,6 +2,7 @@ import fs from "fs";
 
 const startTime = Date.now();
 const MODE_FILE = "./mode.json";
+const UPDATED_FILE = "./updated.json";
 
 function getMode() {
   try {
@@ -20,6 +21,27 @@ function formatRuntime(ms) {
   return `${h}h ${m}m ${s}s`;
 }
 
+function getRecentUpdates() {
+  try {
+    if (!fs.existsSync(UPDATED_FILE)) return "";
+    const { added, date } = JSON.parse(fs.readFileSync(UPDATED_FILE));
+    if (!added || added.length === 0) return "";
+
+    const list = added.map(c => `│ 🆕 .${c.replace(".js", "")}`).join("\n");
+    const updatedDate = new Date(date).toLocaleString();
+
+    return `
+🆕 *RECENT UPDATES* 🆕
+┌─────────────────────────┐
+${list}
+└─────────────────────────┘
+📅 Updated on: ${updatedDate}
+`;
+  } catch {
+    return "";
+  }
+}
+
 export default {
   name: "menu",
   description: "Show the bot command menu",
@@ -27,6 +49,7 @@ export default {
     const from = msg.key.remoteJid;
     const runtime = formatRuntime(Date.now() - startTime);
     const mode = getMode().toUpperCase();
+    const recent = getRecentUpdates();
 
     const menu = `
 ╔══════════════════════════╗
@@ -38,6 +61,7 @@ export default {
 ║ ⚙ Mode: ${mode}
 ║ 🧠 Engine: Baileys
 ╚══════════════════════════╝
+${recent}
 
 🧩 *BOT FILE* 🧩
 ┌─────────────────────────┐
