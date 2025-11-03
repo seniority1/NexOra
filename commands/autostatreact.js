@@ -1,19 +1,5 @@
-import fs from "fs";
 import { isOwner } from "../utils/isOwner.js";
-
-const SETTINGS_FILE = "./settings.json";
-
-function getSettings() {
-  try {
-    return JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf8"));
-  } catch {
-    return {};
-  }
-}
-
-function saveSettings(settings) {
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
-}
+import { setSetting, getSetting } from "../utils/settings.js";
 
 export default {
   name: "autostatreact",
@@ -47,15 +33,15 @@ export default {
       );
     }
 
-    // ⚙️ Read & update settings
-    const settings = getSettings();
-    settings.autostatreact = action === "on";
-    saveSettings(settings);
+    const enabled = action === "on";
+
+    // 💾 Save to global key instead of per-group
+    setSetting("global", { autostatreact: enabled });
 
     await sock.sendMessage(
       from,
       {
-        text: `💚 Auto status reaction has been *${settings.autostatreact ? "ENABLED ✅" : "DISABLED ❌"}*`,
+        text: `💚 Auto status reaction has been *${enabled ? "ENABLED ✅" : "DISABLED ❌"}*`,
       },
       { quoted: msg }
     );
