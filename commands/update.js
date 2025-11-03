@@ -50,12 +50,20 @@ export default {
 
         // Path inside zip, e.g. NexOra-main/commands/
         const COMMANDS_FOLDER = "NexOra-main/commands/";
+        const COMMANDS_DIR = "./commands";
+        const UPDATED_FILE = "./updated.json";
+
+        // Save list before update
+        let oldCommands = [];
+        if (fs.existsSync(COMMANDS_DIR)) {
+          oldCommands = fs.readdirSync(COMMANDS_DIR).filter(f => f.endsWith(".js"));
+        }
 
         let updatedCount = 0;
         entries.forEach((entry) => {
           if (entry.entryName.startsWith(COMMANDS_FOLDER) && !entry.isDirectory) {
             const relativePath = entry.entryName.replace(COMMANDS_FOLDER, "");
-            const outputPath = path.join("./commands", relativePath);
+            const outputPath = path.join(COMMANDS_DIR, relativePath);
 
             fs.mkdirSync(path.dirname(outputPath), { recursive: true });
             fs.writeFileSync(outputPath, entry.getData());
@@ -65,6 +73,22 @@ export default {
 
         fs.unlinkSync(ZIP_PATH);
 
+        // Compare new vs old command files
+        const newCommands = fs
+          .readdirSync(COMMANDS_DIR)
+          .filter(f => f.endsWith(".js") && !oldCommands.includes(f));
+
+        // Save new ones in updated.json
+        fs.writeFileSync(
+          UPDATED_FILE,
+          JSON.stringify({ added: newCommands, date: new Date() }, null, 2)
+        );
+
+        const newCmdText =
+          newCommands.length > 0
+            ? `🆕 *New Commands Added:*\n${newCommands.map(c => `• .${c.replace(".js", "")}`).join("\n")}`
+            : "✅ No new commands were added this time.";
+
         const message = `
 ╔══════════════════════════╗
 ║ ✅  *COMMANDS UPDATED*  ✅
@@ -72,6 +96,8 @@ export default {
 
 🧠 Updated ${updatedCount} command files from GitHub.
 ⚙️ Your local bot settings, sessions, and utils remain untouched.
+
+${newCmdText}
 
 💡 Restart the bot to apply changes:
 > .restart
