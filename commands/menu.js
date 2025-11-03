@@ -28,7 +28,7 @@ export default {
     const runtime = formatRuntime(Date.now() - startTime);
     const mode = getMode().toUpperCase();
 
-  const menu = `
+    const menu = `
 ╔══════════════════════════╗
 ║ 🤖  *NexOra Bot Menu*  ║
 ╠══════════════════════════╣
@@ -36,30 +36,30 @@ export default {
 ║ ⏱ Runtime: ${runtime}
 ║ 📡 Status: Online
 ║ ⚙ Mode: ${mode}
-║ ⚙ Engine: Baileys
+║ 🧠 Engine: Baileys
 ╚══════════════════════════╝
 
-🧨 *BOT FILE* 🧨
+🧩 *BOT FILE* 🧩
 ┌─────────────────────────┐
-│ 🧠 .repo
+│ 📦 .repo
 └─────────────────────────┘
 
 💥 *GENERAL* 💥
 ┌─────────────────────────┐
-│ 💬 .menu
-│ 📘 .help
+│ 🧾 .menu
+│ 📖 .help
 │ ℹ️ .about
 │ 📶 .ping
 │ ⏰ .time
 │ 👤 .owner
-│ 👑 .myjid (Owner Only)
-│ 💖 .love
-│ 💥 .dare
+│ 🆔 .myjid (Owner Only)
+│ ❤️ .love
+│ 🎯 .dare
 │ 📜 .rules
 │ 💡 .fact
 │ 😂 .joke
 │ 🧠 .quote
-│ ☁️ .weather
+│ 🌤️ .weather
 │ 📰 .news
 │ 🌐 .wiki
 │ 💰 .crypto
@@ -68,25 +68,28 @@ export default {
 
 🛠️ *UTILITY* 🛠️
 ┌─────────────────────────┐
-│ 📝 .define
+│ 📘 .define
 │ 🌍 .translate
 │ 💱 .currency
 │ 🧮 .calc
 │ 🔗 .shorten
 │ 🔍 .expand
-│ 📷 .qrcode
-│ 🧾 .scanqr
+│ 🧾 .qrcode
+│ 🧭 .scanqr
 │ ⏰ .remind
 │ 🛰️ .ipinfo
 │ 💾 .save
 │ 📄 .pdf <text/url>
 │ ⚡ .speedtest
-│ 🕵️ .vv2
+│ 🕵️‍♂️ .vv2
 │ 🖼️ .getppgc
-│ 🖼️ .getpp
-│ 🖼️ .getppme
-│ 🖼️ .getppbot
-└─────────────────────────
+│ 👤 .getpp
+│ 🙋 .getppme
+│ 🤖 .getppbot
+│ 🎨 .image <prompt>
+│ 📖 .ocr
+│ ✋ .rps
+└─────────────────────────┘
 
 📥 *DOWNLOADER* 📥
 ┌─────────────────────────┐
@@ -95,36 +98,37 @@ export default {
 │ ▶️ .yt <link>
 │ 📸 .ig <link>
 │ 🎬 .movie <name>
-│ 🎶 .lyrics <song>
+│ 🎤 .lyrics <song>
 └─────────────────────────┘
 
 ⚡ *OWNER COMMANDS* ⚡
 ┌─────────────────────────┐
 │ 🚫 .block @user
 │ ✅ .unblock @user
-│ 🧾 .blockedlist
-│ 🧼 .clearchats
-│ 🌍 .update
+│ 📋 .blockedlist
+│ 🧹 .clearchats
+│ 🔄 .update
 │ 📦 .backup
 │ 📝 .setproname <name>
-│ 🧠 .setbio <text>
+│ 💭 .setbio <text>
 │ 🖼️ .setpropic (reply img)
 │ ♻️ .restart
 │ 🔌 .shutdown
-│ 👋 .leave
+│ 🚪 .leave
 │ 📢 .broadcast group <text>
 │ 📣 .broadcast all <text>
 │ 💬 .broadcastchat <text>
-│ 📂 .allgroups
+│ 🗂️ .allgroups
 │ 📡 .allchannels
 │ 🔗 .join <link>
+│ 📊 .globalspamstats
 └─────────────────────────┘
 
 ⚙️ *BOT SETTINGS (OWNER ONLY)* ⚙️
 ┌─────────────────────────┐
 │ 🔒 .mode private / public
 │ 🔄 .autotoggle
-│ 🔄 .autotoggle on/off
+│ 🧩 .autotoggle on/off
 │ ✍️ .autotoggle autotyping on/off
 │ 🟢 .autotoggle alwaysonline on/off
 │ ➕ .addowner <jid>
@@ -150,24 +154,26 @@ export default {
 │ ℹ️ .info
 │ 🔇 .mute
 │ 🔊 .umute
-│ ⛔ .antilink on/off
-│ 🚫 .antilinkdel on/off
+│ 🚫 .antilink on/off
+│ 🧨 .antilinkdel on/off
 │ ❌ .antibadwords on/off
 │ ⚡ .antidelete on/off
 │ 🛡️ .welcome on/off
 │ 👋 .goodbye on/off
-│ ⛔ .ban @user <time>
+│ 🚷 .ban @user <time>
 │ ✅ .unban @user
 │ 📋 .banlist
-│ 🦵 .kickinactive
+│ 💤 .kickinactive
 │ 📃 .listactive
 │ 📃 .listinactive
-│ 🛡️ .setclosetime
+│ ⏲️ .setclosetime
+│ 🔄 .resetspam
+│ 📊 .spamstats
 └─────────────────────────┘
 
 🧨 *EVIL MENU* 🧨
 ┌─────────────────────────┐
-│ 🧠 .hijack (test only)
+│ 💀 .hijack (test only)
 └─────────────────────────┘
 
 🐞 *BUG MENU* 🐞
@@ -198,37 +204,37 @@ export default {
 🧰 *MISC* 🧰
 ┌─────────────────────────┐
 │ 🖼️ Avatar-based effects
-│ • .misc heart
-│ • .misc horny
-│ • .misc circle
-│ • .misc lgbt
-│ • .misc lied
-│ • .misc lolice
-│ • .misc simpcard
-│ • .misc tonikawa
+│ • 💖 .misc heart
+│ • 😈 .misc horny
+│ • 🔵 .misc circle
+│ • 🏳️‍🌈 .misc lgbt
+│ • 😅 .misc lied
+│ • 👮 .misc lolice
+│ • 🧠 .misc simpcard
+│ • 💫 .misc tonikawa
 │
 │ 🐶 Meme Templates
-│ • .misc its-so-stupid <text>
-│ • .misc namecard username|birthday|description(optional)
-│ • .misc oogway <quote>
-│ • .misc oogway2 <quote>
+│ • 🤦 .misc its-so-stupid <text>
+│ • 🪪 .misc namecard username|birthday|description(optional)
+│ • 🐢 .misc oogway <quote>
+│ • 🐢 .misc oogway2 <quote>
 │
 │ 🐦 Social Templates
-│ • .misc tweet displayname|username|comment|theme(optional light/dark)
-│ • .misc youtube-comment username|comment
+│ • 🐦 .misc tweet displayname|username|comment|theme(optional light/dark)
+│ • ▶️ .misc youtube-comment username|comment
 │
 │ 🌈 Overlay Effects
-│ • .misc comrade
-│ • .misc gay
-│ • .misc glass
-│ • .misc jail
-│ • .misc passed
-│ • .misc triggered
+│ • 🚩 .misc comrade
+│ • 🌈 .misc gay
+│ • 🪞 .misc glass
+│ • 🚔 .misc jail
+│ • ☑️ .misc passed
+│ • 🔥 .misc triggered
 └─────────────────────────┘
 
 🎉 *FUN* 🎉
 ┌─────────────────────────┐
-│ 🖼️ .sticker
+│ 🎭 .sticker
 │ 🖼️ .toimg
 │ 🗣️ .tts <lang> <text>
 │ 🎲 .roll
@@ -250,6 +256,7 @@ https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
 > 🧠 Powered by *NexOra*  
 > 👑 Created by *Seniority*
 `;
+
     await sock.sendMessage(
       from,
       {
