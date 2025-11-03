@@ -1,5 +1,12 @@
 // commands/ocr.js
 import { createWorker } from "tesseract.js";
+import { downloadContentFromMessage } from "@whiskeysockets/baileys";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default {
   name: "ocr",
@@ -20,24 +27,28 @@ export default {
     try {
       await sock.sendMessage(from, { text: "🔍 Extracting text, please wait..." }, { quoted: msg });
 
-      const buffer = await sock.downloadMediaMessage({ message: quoted });
+      // ✅ Download image from quoted message
+      const stream = await downloadContentFromMessage(quoted.imageMessage, "image");
+      let buffer = Buffer.from([]);
+      for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
-      // Create OCR worker (English by default)
+      // 🖼️ Save temp file
+      const tempPath = path.join(__dirname, `ocr_${Date.now()}.jpg`);
+      fs.writeFileSync(tempPath, buffer);
+
+      // 🧠 Run OCR
       const worker = await createWorker("eng");
-
       const {
         data: { text },
-      } = await worker.recognize(buffer);
-
+      } = await worker.recognize(tempPath);
       await worker.terminate();
 
-      const cleanText = text.trim() || "⚠️ No readable text found in the image.";
+      fs.unlinkSync(tempPath); // cleanup temp file
 
+      const cleanText = text.trim() || "⚠️ No readable text found in the image.";
       await sock.sendMessage(
         from,
-        {
-          text: `📜 *Extracted Text:*\n\n${cleanText}`,
-        },
+        { text: `📜 *Extracted Text:*\n\n${cleanText}` },
         { quoted: msg }
       );
     } catch (err) {
