@@ -1,41 +1,59 @@
-import { isOwner } from "../utils/isOwner.js";
-
 export default {
   name: "statusviews",
-  description: "Check who viewed your recent status (Owner only)",
+  description: "Show who viewed your WhatsApp statuses (if supported)",
   async execute(sock, msg) {
     const from = msg.key.remoteJid;
-    const botName = "NexOra";
-    const sender = msg.key.participant || msg.key.remoteJid;
-
-    // ✅ Owner check
-    if (!isOwner(sender)) {
-      return sock.sendMessage(from, { text: "❌ Only owner can use this command!" }, { quoted: msg });
-    }
 
     try {
-      const stories = await sock.fetchStatusUpdates();
-      if (!stories || stories.length === 0) {
-        return sock.sendMessage(from, { text: "📭 No recent status or views yet." }, { quoted: msg });
+      // Try fetching current status viewers using a raw IQ query
+      const result = await sock.query({
+        tag: "iq",
+        attrs: {
+          type: "get",
+          xmlns: "status",
+          to: "status@broadcast",
+        },
+        content: [{ tag: "status", attrs: {} }],
+      });
+
+      if (!result || !result.content) {
+        await sock.sendMessage(from, { text: "⚠️ Status views are not supported on your WhatsApp or Baileys version." }, { quoted: msg });
+        return;
       }
 
-      const last = stories[stories.length - 1];
-      const viewers = last.participants || [];
-      const count = viewers.length;
+      // Extract JIDs of people who viewed your status
+      const viewers = result.content
+        .map((v) => v.attrs?.jid)
+        .filter((jid) => jid && jid.includes("@s.whatsapp.net"));
 
-      let text = `
-┏━━🤖 *${botName.toUpperCase()} BOT* ━━┓
-👀 *Status Views Report*
+      if (viewers.length === 0) {
+        await sock.sendMessage(from, { text: "😔 No one has viewed your statuses yet." }, { quoted: msg });
+        return;
+      }
 
-📊 Total views: *${count}*
-${count > 0 ? "\n" + viewers.map((v, i) => `${i + 1}. @${v.split("@")[0]}`).join("\n") : ""}
-┗━━━━━━━━━━━━━━━━━━━━┛
+      // Try fetching display names for each viewer
+      const contacts = await Promise.all(
+        viewers.map(async (jid) => {
+          const contact = await sock.onWhatsApp(jid);
+          const name = contact?.[0]?.notify || contact?.[0]?.jid?.split("@")[0];
+          return `• ${name}`;
+        })
+      );
+
+      const message = `
+👀 *Status Views Report* 👀
+
+📊 Total Viewers: *${viewers.length}*
+
+${contacts.join("\n")}
+
+🕓 Checked just now
       `.trim();
 
-      await sock.sendMessage(from, { text, mentions: viewers }, { quoted: msg });
+      await sock.sendMessage(from, { text: message }, { quoted: msg });
     } catch (err) {
       console.error("statusviews error:", err);
-      await sock.sendMessage(from, { text: "⚠️ Failed to fetch status views." }, { quoted: msg });
+      await sock.sendMessage(from, { text: "❌ Failed to fetch status viewers. (Feature may not be supported yet)" }, { quoted: msg });
     }
   },
 };
