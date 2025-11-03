@@ -1,14 +1,14 @@
 import fs from "fs";
 import https from "https";
 import AdmZip from "adm-zip";
-import { exec } from "child_process";
+import path from "path";
 
 const GITHUB_ZIP_URL = "https://github.com/seniority1/NexOra/archive/refs/heads/main.zip";
 const ZIP_PATH = "./update.zip";
 
 function downloadZip(url, dest, callback) {
   https.get(url, (res) => {
-    // 🔁 Handle redirect (302)
+    // Handle redirect (302)
     if (res.statusCode === 302 && res.headers.location) {
       return downloadZip(res.headers.location, dest, callback);
     }
@@ -25,73 +25,61 @@ function downloadZip(url, dest, callback) {
 
 export default {
   name: "update",
-  description: "Update bot from GitHub (Owner only)",
+  description: "Update bot commands from GitHub (Owner only)",
   async execute(sock, msg) {
     const from = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
-
-    // 🧠 Owner check
     const { isOwner } = await import("../utils/isOwner.js");
+
     if (!isOwner(sender)) {
-      await sock.sendMessage(from, { text: "❌ Only the owner can use this command!" }, { quoted: msg });
+      await sock.sendMessage(from, { text: "🚫 Only the owner can use this command." }, { quoted: msg });
       return;
     }
 
-    await sock.sendMessage(from, { text: "📥 Downloading latest update from GitHub..." }, { quoted: msg });
+    await sock.sendMessage(from, { text: "📦 Fetching latest *command updates* from GitHub..." }, { quoted: msg });
 
     downloadZip(GITHUB_ZIP_URL, ZIP_PATH, (err) => {
       if (err) {
-        console.error("Update error:", err);
-        sock.sendMessage(from, { text: `❌ Update failed: ${err.message}` }, { quoted: msg });
+        sock.sendMessage(from, { text: `❌ Download failed: ${err.message}` }, { quoted: msg });
         return;
       }
 
       try {
-        // 📦 Extract ZIP to current directory
         const zip = new AdmZip(ZIP_PATH);
-        zip.extractAllTo("./", true);
-        fs.unlinkSync(ZIP_PATH);
+        const entries = zip.getEntries();
 
-        // 🟩 Final update message (before restart)
-        const doneMessage = `
-╔══════════════════════════╗
-║ ✅  *UPDATE COMPLETE*  ✅
-╚══════════════════════════╝
+        // Path inside zip, e.g. NexOra-main/commands/
+        const COMMANDS_FOLDER = "NexOra-main/commands/";
 
-🚀 The bot has been successfully updated to the latest version from GitHub.
+        let updatedCount = 0;
+        entries.forEach((entry) => {
+          if (entry.entryName.startsWith(COMMANDS_FOLDER) && !entry.isDirectory) {
+            const relativePath = entry.entryName.replace(COMMANDS_FOLDER, "");
+            const outputPath = path.join("./commands", relativePath);
 
-📦 All files extracted and dependencies will be installed.
-🔄 Restarting the bot now...
-        `.trim();
-
-        sock.sendMessage(from, { text: doneMessage }, { quoted: msg });
-
-        // 🔄 Restart the bot process
-        exec("npm install --legacy-peer-deps && pm2 restart all || node index.js", (error, stdout, stderr) => {
-          if (error) {
-            console.error(`Restart error: ${error}`);
-            sock.sendMessage(from, { text: "⚠️ Update extracted but failed to restart. Please restart manually." }, { quoted: msg });
-            return;
+            fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+            fs.writeFileSync(outputPath, entry.getData());
+            updatedCount++;
           }
-
-          console.log(stdout);
-          console.error(stderr);
-
-          // ✅ Post-restart success message
-          const restartMessage = `
-╔══════════════════════════╗
-║ 🚀  *RESTART COMPLETE*  🚀
-╚══════════════════════════╝
-
-✅ The bot has been successfully restarted and is now running the latest version.
-          `.trim();
-
-          sock.sendMessage(from, { text: restartMessage }, { quoted: msg });
         });
 
+        fs.unlinkSync(ZIP_PATH);
+
+        const message = `
+╔══════════════════════════╗
+║ ✅  *COMMANDS UPDATED*  ✅
+╚══════════════════════════╝
+
+🧠 Updated ${updatedCount} command files from GitHub.
+⚙️ Your local bot settings, sessions, and utils remain untouched.
+
+💡 Restart the bot to apply changes:
+> .restart
+        `.trim();
+
+        sock.sendMessage(from, { text: message }, { quoted: msg });
       } catch (e) {
-        console.error("Extraction error:", e);
-        sock.sendMessage(from, { text: `❌ Failed to extract update: ${e.message}` }, { quoted: msg });
+        sock.sendMessage(from, { text: `❌ Extraction error: ${e.message}` }, { quoted: msg });
       }
     });
   },
