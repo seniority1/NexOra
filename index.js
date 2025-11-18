@@ -360,4 +360,5 @@ if (isSpam(from, sender, spamDB)) {
 }
 
 // ✅ Start bot
-startBot();
+// 📤 Export the bot starter so deployController can call it
+export { startBot };
