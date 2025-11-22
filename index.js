@@ -1,7 +1,6 @@
 // bot.js
 import fs from "fs";
 import path from "path";
-import { writeFileSync } from "fs";
 import makeWASocket, {
   useMultiFileAuthState,
   makeCacheableSignalKeyStore,
@@ -116,31 +115,20 @@ async function startBot() {
   sock.ev.on("creds.update", saveCreds);
 
   // 📱 Pairing
-// 📱 Pairing - write pairing code to a file (so deploy controller can read it)
   if (!state.creds.registered) {
     const phoneNumber = process.env.WHATSAPP_NUMBER || config.ownerNumber;
     console.log(`⏳ Requesting pairing code for ${phoneNumber}...`);
     setTimeout(async () => {
       try {
-        // requestPairingCode returns a code that user should paste in WA -> Linked devices
         const code = await sock.requestPairingCode(phoneNumber.trim());
         console.log(`✅ Pairing code: ${code}`);
         console.log("➡️ Link from WhatsApp → Linked Devices → Link with phone number");
-
-        // Try to persist the pairing code to a file in working dir
-        try {
-          const pairingObj = { code, phoneNumber, createdAt: new Date().toISOString() };
-          // write to pairing.json in current working dir (bot folder)
-          writeFileSync(path.join(process.cwd(), "pairing.json"), JSON.stringify(pairingObj, null, 2));
-          console.log("📁 Pairing code written to pairing.json");
-        } catch (wfErr) {
-          console.warn("⚠️ Unable to write pairing file:", wfErr?.message || wfErr);
-        }
       } catch (err) {
         console.error("⚠️ Pairing code error:", err?.message || err);
       }
     }, 3000);
   }
+
   // 🔄 Connection
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "open") {
@@ -360,5 +348,4 @@ if (isSpam(from, sender, spamDB)) {
 }
 
 // ✅ Start bot
-// 📤 Export the bot starter so deployController can call it
-export { startBot };
+startBot();
