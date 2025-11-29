@@ -1,82 +1,85 @@
-import yts from "yt-search";
-import { exec } from "child_process";
-import fs from "fs";
-import path from "path";
+// commands/play.js → 100% JavaScript version (works with your current bot)
+const ytdl = require("ytdl-core");
+const ytSearch = require("yt-search");
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegStatic = require("@ffmpeg-installer/ffmpeg");
 
-export default {
+ffmpeg.setFfmpegPath(ffmpegStatic.path);
+
+module.exports = {
   name: "play",
-  description: "Download and play songs from YouTube (MP3) using yt-dlp",
-
+  description: "Play any song → .play davido funds",
   async execute(sock, msg, args) {
-    const chatId = msg.key.remoteJid;
-    const searchQuery = args.join(" ").trim();
+    const query = args.join(" ");
+    if (!query) return sock.sendMessage(msg.key.remoteJid, { text: "Usage: `.play davido funds`" });
 
-    if (!searchQuery) {
-      await sock.sendMessage(chatId, {
-        text: "🎵 *Please provide a song name*\n\nExample:\n.play shape of you",
-      }, { quoted: msg });
-      return;
+    const chatId = msg.key.remoteJid;
+
+    await sock.sendMessage(chatId, { text: `Searching "${query}" on YouTube...` });
+
+    // Search YouTube
+    let video;
+    try {
+      const result = await ytSearch(query);
+      video = result.videos[0];
+      if (!video) return sock.sendMessage(chatId, { text: "Song not found!" });
+    } catch (e) {
+      return sock.sendMessage(chatId, { text: "Search failed. Try again later." });
     }
+
+    const title = video.title;
+    const duration = video.duration.timestamp || "Live";
+    const thumb = video.thumbnail;
+
+    await sock.sendMessage(chatId, {
+      image: { url: thumb },
+      caption: `Downloading...\n\n*\( {title}*\nDuration: \){duration}\nWait 5–20 secs...`
+    });
 
     try {
-      // 🔍 Search for the song
-      const { videos } = await yts(searchQuery);
-      if (!videos || videos.length === 0) {
-        await sock.sendMessage(chatId, { text: "❌ No songs found." }, { quoted: msg });
-        return;
-      }
-
-      const video = videos[0];
-      const outputDir = "./downloads";
-      if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
-
-      const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, "");
-      const outputFile = path.resolve(outputDir, `${safeTitle}.mp3`);
-
-      // 📸 Send video preview before downloading
-      await sock.sendMessage(chatId, {
-        image: { url: video.thumbnail },
-        caption: `🎧 *${video.title}*\n🕒 Duration: ${video.timestamp}\n👤 Channel: ${video.author.name}\n📺 [Watch on YouTube](${video.url})\n\n⏳ *Downloading audio...*\n\n⚡ *Powered by NexOra*`,
-      }, { quoted: msg });
-
-      // ⚙️ Check if cookies file exists
-      const cookiesPath = path.resolve("cookies.txt");
-      const ytDlpCmd = fs.existsSync(cookiesPath)
-        ? `yt-dlp --cookies "${cookiesPath}" -x --audio-format mp3 -o "${outputFile}" "${video.url}"`
-        : `yt-dlp -x --audio-format mp3 -o "${outputFile}" "${video.url}"`;
-
-      // 📥 Download MP3 using yt-dlp
-      await new Promise((resolve, reject) => {
-        exec(ytDlpCmd, (error, stdout, stderr) => {
-          if (error) {
-            console.error("yt-dlp error:", error);
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
+      const stream = ytdl(video.url, {
+        filter: "audioonly",
+        quality: "highestaudio",
+        highWaterMark: 1 << 25
       });
 
-      // ✅ Send the downloaded MP3 file
+      const chunks = [];
+
+      await new Promise((resolve, reject) => {
+        ffmpeg(stream)
+          .audioBitrate(128)
+          .format("mp3")
+          .on("error", reject)
+          .on("end", resolve)
+          .pipe()
+          .on("data", chunk => chunks.push(chunk));
+      });
+
+      const audioBuffer = Buffer.concat(chunks);
+
+      // Send real MP3 with cover & title
       await sock.sendMessage(chatId, {
-        audio: { url: outputFile },
+        audio: audioBuffer,
         mimetype: "audio/mpeg",
-        fileName: `${safeTitle}.mp3`,
-        caption: `🎶 *${video.title}*\n\n⚡ *Powered by NexOra*`,
-      }, { quoted: msg });
+        fileName: `${title.replace(/[^a-zA-Z0-9]/g, "_")}.mp3`,
+        ptt: false,
+        contextInfo: {
+          externalAdReply: {
+            title: title,
+            body: "Now Playing ♪",
+            thumbnail: await (await fetch(thumb)).buffer(),
+            mediaType: 2,
+            mediaUrl: video.url,
+            sourceUrl: video.url
+          }
+        }
+      });
 
-      // 🧹 Clean up
-      setTimeout(() => {
-        fs.unlink(outputFile, (err) => {
-          if (err) console.error("Failed to delete file:", err);
-        });
-      }, 15000);
+      await sock.sendMessage(chatId, { text: "Enjoy the jam!" });
 
-    } catch (err) {
-      console.error("❌ play (yt-dlp) error:", err);
-      await sock.sendMessage(chatId, {
-        text: "🚨 Download failed. Please try again later.",
-      }, { quoted: msg });
+    } catch (error) {
+      console.log(error);
+      await sock.sendMessage(chatId, { text: "Can't download this song (age-restricted or blocked)." });
     }
-  },
+  }
 };
