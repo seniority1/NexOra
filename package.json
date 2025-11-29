@@ -9,6 +9,7 @@
     "postinstall": "apt-get update -y && apt-get install -y --no-install-recommends ffmpeg curl && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/bin/yt-dlp && chmod +x /usr/bin/yt-dlp && npm install --legacy-peer-deps"
   },
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@whiskeysockets/baileys": "^6.7.4",
     "adm-zip": "^0.5.10",
     "axios": "^1.6.8",
