@@ -18,7 +18,7 @@ function formatRuntime(ms) {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
-  return `\( {h}h \){m}m ${s}s`;
+  return `${h}h ${m}m ${s}s`;
 }
 
 function getRecentUpdates() {
@@ -76,7 +76,7 @@ ${recent}
 │ 📶 .ping
 │ ⏰ .time
 │ 👤 .owner
-│ 🆔 .myjid 
+│ 🆔 .myjid (Owner Only)
 │ ❤️ .love
 │ 🎯 .dare
 │ 📜 .rules
@@ -87,7 +87,6 @@ ${recent}
 │ 📰 .news
 │ 🌐 .wiki
 │ 💰 .crypto
-│ 🌐 .google
 │ 🎥 .vv
 └─────────────────────────┘
 
@@ -121,16 +120,9 @@ ${recent}
 │ 🎵 .tiktok <link>
 │ 📘 .fb <link>
 │ ▶️ .yt <link>
-│ ▶️ .play <song>
 │ 📸 .ig <link>
 │ 🎬 .movie <name>
-│ 🎤 .lyrics <artist> <song>
-└─────────────────────────┘
-
-📱 *APK DOWNLOADER* 📱
-┌─────────────────────────┐
-│ 📲 .apk <app name>         
-│ 🎮 .modapk <app name>      
+│ 🎤 .lyrics <song>
 └─────────────────────────┘
 
 ⚡ *OWNER COMMANDS* ⚡
@@ -271,10 +263,6 @@ ${recent}
 │ 🗣️ .tts <lang> <text>
 │ 🎲 .roll
 │ 🤖 .ai <prompt>
-│ 🤠 .wanted
-│ 💻 .carbon (reply code)    - Code to beautiful image
-│ 💑 .couple                 - Random couple avatars
-│ 📊 .check                  - Handsome/Beautiful %
 └─────────────────────────┘
 
 🧠 *AI FEATURES* 🧠
@@ -285,9 +273,6 @@ ${recent}
 │ 🎶 .lyrics <song>
 │ 🎬 .aivideoidea <topic>
 └─────────────────────────┘
-
-📌 *Channel:*  
-https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
 
 > 🧠 Powered by *NexOra*  
 > 👑 Created by *Seniority*
@@ -305,3 +290,4 @@ https://whatsapp.com/channel/0029VbB4xAq3QxRwqM7VBc3C
     );
   },
 };
+
