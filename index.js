@@ -1,7 +1,6 @@
-// index.js — dynamic multi-user friendly NexOra bot entrypoint
+// index.js
 import fs from "fs";
 import path from "path";
-import { fileURLToPath, pathToFileURL } from "url";
 import makeWASocket, {
   useMultiFileAuthState,
   makeCacheableSignalKeyStore,
@@ -9,83 +8,71 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
 } from "@whiskeysockets/baileys";
 import pino from "pino";
+import { fileURLToPath } from "url";
+import config from "./config.js";
+import { isFeatureOn, getSetting } from "./utils/settings.js";
+import { isAdmin } from "./utils/isAdmin.js";
+import { autoBotConfig } from "./utils/autobot.js";
+import { getMode } from "./utils/mode.js";
+import { isOwner } from "./utils/isOwner.js";
+import { updateActivity } from "./utils/activityTracker.js";
+import { games, sendBoard } from "./commands/tictactoe.js";
+import {
+  isFiltered,
+  addFilter,
+  isSpam,
+  addSpam,
+  resetSpam,
+} from "./utils/antispam.js";
+import checkDependencies from "./utils/checkDependencies.js";
+
+checkDependencies();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ---------------------------
-//  CONFIG / ENV / PATHS
-// ---------------------------
-// BOT_CONFIG_DIR : where config.js lives (default: current folder)
-// BOT_SESSION_DIR: where auth/session is saved (default: ./auth)
-// OWNER_NUMBER   : optional override for owner number (without @s.whatsapp.net)
-const CONFIG_DIR = process.env.BOT_CONFIG_DIR ? path.resolve(process.env.BOT_CONFIG_DIR) : process.cwd();
-const SESSION_DIR = process.env.BOT_SESSION_DIR ? path.resolve(process.env.BOT_SESSION_DIR) : path.join(process.cwd(), "auth");
-const OWNER_NUMBER_OVERRIDE = process.env.OWNER_NUMBER || null;
+// 🧠 Load commands
+const commands = new Map();
+const commandFiles = fs.existsSync(path.join(__dirname, "commands"))
+  ? fs.readdirSync(path.join(__dirname, "commands")).filter((f) => f.endsWith(".js"))
+  : [];
 
-// try-load config.js (must export default)
-async function loadConfig() {
-  const configFile = path.join(CONFIG_DIR, "config.js");
-  if (!fs.existsSync(configFile)) {
-    throw new Error(`config.js not found in ${CONFIG_DIR}`);
-  }
-  const moduleUrl = pathToFileURL(configFile).href;
-  const mod = await import(moduleUrl);
-  return mod.default || mod;
-}
+// 🧱 Spam DB
+const spamDB = [];
+resetSpam(spamDB);
 
-// ---------------------------
-//  COMMANDS & UTILITIES LOADER
-// ---------------------------
-async function loadCommands(commandsMap, commandsDir) {
-  commandsMap.clear();
-  if (!fs.existsSync(commandsDir)) return;
-  const files = fs.readdirSync(commandsDir).filter((f) => f.endsWith(".js"));
-  for (const file of files) {
+// 📦 Load all command modules
+async function loadCommands() {
+  for (const file of commandFiles) {
     try {
-      const mod = await import(pathToFileURL(path.join(commandsDir, file)).href);
-      const cmd = mod.default;
-      const aliases = mod.aliases || [];
-      if (!cmd || !cmd.name) continue;
-      commandsMap.set(cmd.name, cmd);
-      for (const a of aliases) if (!commandsMap.has(a)) commandsMap.set(a, cmd);
-      console.log(`Loaded command: ${cmd.name}${aliases.length ? ` (${aliases.join(", ")})` : ""}`);
-    } catch (e) {
-      console.error(`Failed to load command ${file}:`, e?.message || e);
+      const module = await import(`./commands/${file}`);
+      const cmd = module.default;
+      const aliases = module.aliases || [];
+
+      if (!cmd || !cmd.name) {
+        console.warn(`⚠️ Skipped invalid command file: ${file}`);
+        continue;
+      }
+
+      commands.set(cmd.name, cmd);
+      for (const alias of aliases)
+        if (!commands.has(alias)) commands.set(alias, cmd);
+
+      console.log(`✅ Loaded command: ${cmd.name}${aliases.length ? ` (${aliases.join(", ")})` : ""}`);
+    } catch (err) {
+      console.error(`❌ Failed to load command ${file}:`, err.message || err);
     }
   }
+
+  console.log(`📘 Total commands loaded: ${commands.size}`);
 }
 
-// ---------------------------
-//  MAIN bot starter
-// ---------------------------
+// 🚀 Start the bot
 async function startBot() {
-  // Load per-instance config
-  const config = await loadConfig();
+  await loadCommands();
 
-  // allow override for owner number (used across your code)
-  const OWNER_NUMBER = OWNER_NUMBER_OVERRIDE || config.ownerNumber;
-
-  // commands path relative to CONFIG_DIR (so each user's commands live in their folder)
-  const COMMANDS_DIR = path.join(CONFIG_DIR, "commands");
-
-  // ensure session dir exists
-  if (!fs.existsSync(SESSION_DIR)) fs.mkdirSync(SESSION_DIR, { recursive: true });
-
-  // load commands
-  const commands = new Map();
-  await loadCommands(commands, COMMANDS_DIR);
-  console.log(`Total commands loaded: ${commands.size}`);
-
-  // spam DB helper (same pattern you used)
-  const spamDB = [];
-  // If you have a resetSpam util, call it here; else keep simple array
-
-  // Load baileys version
+  const { state, saveCreds } = await useMultiFileAuthState("./auth");
   const { version } = await fetchLatestBaileysVersion();
-
-  // Use per-instance auth dir (SESSION_DIR)
-  const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
 
   const sock = makeWASocket({
     logger: pino({ level: "silent" }),
@@ -98,15 +85,14 @@ async function startBot() {
     browser: ["Ubuntu", "Chrome", "22.04.4"],
   });
 
-  sock.ev.on("creds.update", saveCreds);
-
-  // === message send wrapper (kept from your original)
-  const oldSendMessage = sock.sendMessage.bind(sock);
+  // 🧩 Send message wrapper
+  const oldSendMessage = sock.sendMessage;
   sock.sendMessage = async function (jid, content = {}, options = {}) {
     try {
       const isInternal =
-        ["status@broadcast", "status@newsletter", "broadcast"].some((str) => jid.includes(str)) ||
-        jid.startsWith(OWNER_NUMBER);
+        ["status@broadcast", "status@newsletter", "broadcast"].some((str) =>
+          jid.includes(str)
+        ) || jid.startsWith(config.ownerNumber);
 
       if (!isInternal) {
         if (!content.contextInfo) content.contextInfo = {};
@@ -119,70 +105,99 @@ async function startBot() {
         };
       }
 
-      return await oldSendMessage(jid, content, options);
-    } catch (e) {
-      console.error("sendMessage wrapper error:", e?.message || e);
-      return await oldSendMessage(jid, content, options);
+      return await oldSendMessage.call(this, jid, content, options);
+    } catch (err) {
+      console.error("⚠️ sendMessage wrapper error:", err);
+      return await oldSendMessage.call(this, jid, content, options);
     }
   };
 
-  // Pairing helper - NOTE: factory / deployer will normally handle pairing.
-  // This helper attempts requesting a pairing code using the existing socket.
-  // Call from external process by invoking a short-lived script that sets
-  // BOT_SESSION_DIR to the user's auth dir and calls this function (or
-  // create an endpoint in your factory that spawns this script).
-  async function requestPairing(phoneNumber) {
-    if (!phoneNumber) throw new Error("phoneNumber required");
-    if (!/^\d{10,15}$/.test(phoneNumber)) throw new Error("Invalid phoneNumber");
+  sock.ev.on("creds.update", saveCreds);
 
-    if (!fs.existsSync(SESSION_DIR)) fs.mkdirSync(SESSION_DIR, { recursive: true });
+  // 📱 Pairing
+  // ---------------------------
+// 📱 Pairing (Dynamic)
+// ---------------------------
+async function requestPairing(sock, phoneNumber) {
+  const authDir = `./auth/${phoneNumber}`;
+  if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
 
-    // If already registered, bail out
+  const { state, saveCreds } = await useMultiFileAuthState(authDir);
+
+  sock.ev.on("creds.update", saveCreds);
+
+  if (!state.creds.registered) {
+    console.log(`⏳ Requesting pairing code for ${phoneNumber}...`);
     try {
-      const credsPath = path.join(SESSION_DIR, "creds.json");
-      if (fs.existsSync(credsPath)) {
-        const creds = JSON.parse(fs.readFileSync(credsPath));
-        if (creds.registered) return { alreadyLinked: true };
-      }
-    } catch {}
-
-    // Ensure socket is ready
-    await new Promise((r) => setTimeout(r, 800));
-    // request pairing code
-    const code = await sock.requestPairingCode(phoneNumber.trim());
-    return { pairingCode: code };
+      const code = await sock.requestPairingCode(phoneNumber.trim());
+      console.log(`✅ Pairing code for ${phoneNumber}: ${code}`);
+      return code;
+    } catch (err) {
+      console.error("⚠️ Pairing code error:", err?.message || err);
+      throw err;
+    }
   }
+}
 
-  // Connection handling
-  sock.ev.on("connection.update", async (update) => {
-    try {
-      const { connection, lastDisconnect } = update;
-      if (connection === "open") {
-        console.log("✅ NexOra connected!");
-        // announce to owner if available
-        try {
-          if (OWNER_NUMBER) {
+// Example usage: dynamically from backend API
+// Suppose your backend sends POST { phone: "234XXXXXXXXX" }
+import express from "express";
+const app = express();
+app.use(express.json());
+
+app.post("/pair", async (req, res) => {
+  const phoneNumber = req.body.phone;
+  if (!phoneNumber) return res.status(400).json({ error: "Phone number required" });
+
+  try {
+    const { version } = await fetchLatestBaileysVersion();
+    const sock = makeWASocket({
+      logger: pino({ level: "silent" }),
+      printQRInTerminal: false,
+      auth: { creds: {}, keys: makeCacheableSignalKeyStore({}) }, // temporary for pairing
+      version,
+      browser: ["Ubuntu", "Chrome", "22.04.4"],
+    });
+
+    const code = await requestPairing(sock, phoneNumber);
+    res.json({ pairingCode: code });
+  } catch (err) {
+    res.status(500).json({ error: err.message || err });
+  }
+});
+
+app.listen(3000, () => console.log("Backend API listening on port 3000"));
+
+  // 🔄 Connection
+  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+    if (connection === "open") {
+      console.log("✅ NexOra connected!");
+      try {
+        await sock.sendMessage(`${config.ownerNumber}@s.whatsapp.net`, {
+          text: "🤖 NexOra is back online! Running smoothly ✅",
+        });
+      } catch {}
+
+      // 🟢 Always online
+      setInterval(async () => {
+        if (autoBotConfig.alwaysOnline) {
+          try {
             await sock.sendPresenceUpdate("available");
-            await sock.sendMessage(`${OWNER_NUMBER}@s.whatsapp.net`, { text: "🤖 NexOra is back online!" });
+          } catch (err) {
+            console.error("⚠️ AlwaysOnline error:", err?.message || err);
           }
-        } catch {}
-      } else if (connection === "close") {
-        const reason = lastDisconnect?.error?.output?.statusCode;
-        console.log("❌ Connection closed:", reason);
-        if (reason !== DisconnectReason.loggedOut) {
-          // restart logic: small delay then re-run startBot by exiting process (pm2 will restart)
-          console.log("Attempting restart (exit to let PM2 restart instance)...");
-          process.exit(1);
-        } else {
-          console.log("Logged out — manual intervention required for this instance.");
         }
-      }
-    } catch (e) {
-      console.error("connection.update error:", e?.message || e);
+      }, 15000);
+    } else if (connection === "close") {
+      const reason = lastDisconnect?.error?.output?.statusCode;
+      console.log("❌ Connection closed:", reason);
+      if (reason !== DisconnectReason.loggedOut) startBot();
     }
   });
 
-  // Messages listener (kept structure from your original)
+  // ---------------------------
+  // Message Listener (fixed)
+  // ---------------------------
   sock.ev.on("messages.upsert", async ({ messages }) => {
     try {
       const msg = messages?.[0];
@@ -190,7 +205,9 @@ async function startBot() {
 
       const fromMe = msg.key.fromMe;
       const sender = msg.key.participant || msg.key.remoteJid;
-      if (fromMe && !String(sender).includes(OWNER_NUMBER)) return;
+
+      // 🧠 Allow owner messages even if fromMe
+      if (fromMe && !String(sender).includes(config.ownerNumber)) return;
 
       const from = msg.key.remoteJid;
       const isGroup = typeof from === "string" && from.endsWith("@g.us");
@@ -202,10 +219,38 @@ async function startBot() {
         msg.message.videoMessage?.caption ||
         "";
 
-      if (!isGroup) console.log(`DM from ${sender}: ${textMsg}`);
+      if (!isGroup) {
+        console.log(`💬 DM message from ${sender}: ${textMsg}`);
+      }
 
-      // anti-badwords / group handling - keep your existing utilities (import them if present)
-      // Example command handling:
+      // GROUP FEATURES (antilink, antibadwords)
+      if (isGroup) {
+        try {
+          updateActivity(from, sender);
+        } catch (err) {
+          console.error("⚠️ updateActivity error:", err);
+        }
+      }
+
+      const senderIsAdmin = isGroup ? await isAdmin(sock, from, sender) : false;
+
+      const badWords = ["fuck", "bitch", "asshole", "nigga", "bastard", "shit", "pussy"];
+      if (isGroup && isFeatureOn(from, "antibadwords")) {
+        const lowerText = textMsg.toLowerCase();
+        if (badWords.some((w) => lowerText.includes(w)) && !senderIsAdmin) {
+          await sock.sendMessage(from, {
+            delete: { remoteJid: from, fromMe: false, id: msg.key.id, participant: sender },
+          });
+          await sock.sendMessage(from, {
+            text: `🚫 Bad language not allowed! @${String(sender).split("@")[0]}'s message was deleted.`,
+            mentions: [sender],
+          });
+        }
+      }
+
+      // ---------------------------
+      // COMMAND HANDLER (DM + GROUP)
+      // ---------------------------
       const prefix = ".";
       if (textMsg && textMsg.startsWith(prefix)) {
         const args = textMsg.slice(prefix.length).trim().split(/ +/).filter(Boolean);
@@ -215,52 +260,131 @@ async function startBot() {
         const command = commands.get(commandName);
         if (!command) return;
 
-        // basic anti-spam / filtering hooks would go here (you can reuse your existing functions)
-        try {
-          await command.execute(sock, msg, args, from, sender);
-          console.log(`Executed command ${commandName} by ${sender}`);
-        } catch (err) {
-          console.error("command execute error:", err?.message || err);
-        }
+        const mode = getMode();
+        const isOwnerUser = isOwner(sender);
+
+        if (mode === "private" && !isOwnerUser && isGroup) return;
+
+        if (isFiltered(from, sender)) {
+  await sock.sendMessage(from, { text: "⏳ Please wait before using another command." }, { quoted: msg });
+  return;
+}
+
+addFilter(from, sender);
+addSpam(from, sender, spamDB);
+
+if (isSpam(from, sender, spamDB)) {
+  await sock.sendMessage(from, { text: "🚫 Too many commands. Please slow down." }, { quoted: msg });
+  return;
+}
+        await command.execute(sock, msg, args, from, sender);
+        console.log(`✅ Command executed: ${commandName} by ${sender}`);
       }
     } catch (err) {
-      console.error("messages.upsert error:", err?.message || err);
+      console.error("❌ messages.upsert error:", err);
     }
   });
 
-  // Example additional events (group participants / messages.update) preserved in the same way as your original
+  // ---------------------------
+  // 📸 Auto Status Reaction 💚
+  // ---------------------------
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const autoReact = getSetting("autostatreact");
+    if (!autoReact) return;
+
+    const msg = messages?.[0];
+    if (!msg || msg.key.remoteJid !== "status@broadcast") return;
+
+    try {
+      await sock.sendMessage(msg.key.participant, {
+        react: { text: "💚", key: msg.key },
+      });
+      console.log("💚 Auto-reacted to a status!");
+    } catch (err) {
+      console.error("⚠️ Auto react error:", err);
+    }
+  });
+
+  // ---------------------------
+  // Anti-Delete, Welcome, Goodbye (unchanged)
+  // ---------------------------
+  sock.ev.on("messages.update", async (updates) => {
+    for (const update of updates) {
+      try {
+        if (update.messageStubType !== 91) continue;
+
+        const jid = update.key.remoteJid;
+        if (!jid || !jid.endsWith("@g.us")) continue;
+
+        const setting = getSetting(jid);
+        if (!setting?.antidelete) continue;
+
+        const deletedKey = update.key;
+        let deletedMsg;
+        try {
+          deletedMsg = await sock.loadMessage(jid, deletedKey.id);
+        } catch (err) {
+          console.error("⚠️ Cannot load deleted message:", err?.message || err);
+          continue;
+        }
+        if (!deletedMsg?.message) continue;
+
+        const sender = deletedMsg.key.participant || deletedMsg.key.remoteJid;
+        const name = String(sender).split("@")[0];
+        const msgType = Object.keys(deletedMsg.message)[0];
+
+        await sock.sendMessage(
+          jid,
+          {
+            text: `⚠️ *Anti-Delete Activated!*\n\n👤 *Sender:* @${name}\n🗂️ *Type:* ${msgType}\n\n📩 Message recovered below 👇`,
+            mentions: [sender],
+          },
+          { quoted: deletedMsg }
+        );
+
+        const buffer = await sock.downloadMediaMessage(deletedMsg).catch(() => null);
+        if (buffer) {
+          const tempFile = `./temp_${Date.now()}`;
+          fs.writeFileSync(tempFile, buffer);
+          const mediaKey = msgType.replace("Message", "");
+          await sock.sendMessage(
+            jid,
+            {
+              [mediaKey]: { url: tempFile },
+              caption: deletedMsg.message[msgType].caption || "Recovered deleted media 🗂️",
+            },
+            { quoted: deletedMsg }
+          );
+          fs.unlinkSync(tempFile);
+        }
+      } catch (err) {
+        console.error("❌ AntiDelete Error:", err);
+      }
+    }
+  });
+
   sock.ev.on("group-participants.update", async (update) => {
     try {
       const { id, participants, action } = update;
       for (const participant of participants) {
-        if (action === "add") {
-          await sock.sendMessage(id, { text: `Welcome @${participant.split("@")[0]}!`, mentions: [participant] });
+        if (action === "add" && isFeatureOn(id, "welcome")) {
+          await sock.sendMessage(id, {
+            text: `👋 Welcome @${participant.split("@")[0]}!`,
+            mentions: [participant],
+          });
+        }
+        if (action === "remove" && isFeatureOn(id, "goodbye")) {
+          await sock.sendMessage(id, {
+            text: `👋 Goodbye @${participant.split("@")[0]}! We’ll miss you 😢`,
+            mentions: [participant],
+          });
         }
       }
-    } catch (e) {
-      console.error("group-participants.update error:", e?.message || e);
+    } catch (err) {
+      console.error("❌ group update error:", err);
     }
   });
-
-  // export pairing helper onto global so the deployer script can call it if needed
-  // (when running under PM2, you can spawn a tiny node script that imports this file
-  // or call an external factory API that launches a short-lived pairing worker.)
-  global.__NEXORA_REQUEST_PAIRING = requestPairing;
-
-  console.log("NexOra bot started for folder:", CONFIG_DIR);
-  console.log("Session dir:", SESSION_DIR);
-  console.log("Owner number:", OWNER_NUMBER ? OWNER_NUMBER : "(from config.js)");
-
-  return { sock, requestPairing };
 }
 
-// Start if run directly
-if (import.meta.url === pathToFileURL(process.argv[1] || "").href || !process.env.NODE_WORKER_ID) {
-  // run the bot
-  startBot().catch((e) => {
-    console.error("Fatal start error:", e?.message || e);
-    process.exit(1);
-  });
-}
-
-export default startBot;
+// ✅ Start bot
+startBot();
