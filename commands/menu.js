@@ -18,7 +18,7 @@ function formatRuntime(ms) {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
-  return `${h}h ${m}m ${s}s`;
+  return `\( {h}h \){m}m ${s}s`;
 }
 
 function getRecentUpdates() {
@@ -123,6 +123,12 @@ ${recent}
 │ 📸 .ig <link>
 │ 🎬 .movie <name>
 │ 🎤 .lyrics <song>
+└─────────────────────────┘
+
+📱 *APK DOWNLOADER* 📱
+┌─────────────────────────┐
+│ 📲 .apk <app name>         
+│ 🎮 .modapk <app name>      
 └─────────────────────────┘
 
 ⚡ *OWNER COMMANDS* ⚡
