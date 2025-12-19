@@ -271,6 +271,10 @@ ${recent}
 │ 🗣️ .tts <lang> <text>
 │ 🎲 .roll
 │ 🤖 .ai <prompt>
+│ 🤠 .wanted
+│ 💻 .carbon (reply code)    - Code to beautiful image
+│ 💑 .couple                 - Random couple avatars
+│ 📊 .check                  - Handsome/Beautiful %
 └─────────────────────────┘
 
 🧠 *AI FEATURES* 🧠
