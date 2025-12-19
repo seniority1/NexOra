@@ -121,6 +121,7 @@ ${recent}
 │ 🎵 .tiktok <link>
 │ 📘 .fb <link>
 │ ▶️ .yt <link>
+│ ▶️ .play <song>
 │ 📸 .ig <link>
 │ 🎬 .movie <name>
 │ 🎤 .lyrics <artist> <song>
