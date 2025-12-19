@@ -22,7 +22,7 @@ export function addSpam(groupId, sender) {
 
   const i = db.findIndex((x) => x.id === sender);
   if (i !== -1) db[i].spam += 1;
-  else db.push({ id: sender, spam: 1, expired: Date.now() + ms("10m") });
+  else db.push({ id: sender, spam: 1, expired: Date.now() + ms("1m") });
 }
 
 export function resetSpam() {
