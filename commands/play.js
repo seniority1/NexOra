@@ -1,52 +1,130 @@
-// commands/play.js → FINAL 410-PROOF VERSION (works everywhere)
-import ytdl from "ytdl-core";
-import ytSearch from "yt-search";
-
 export default {
   name: "play",
-  description: "Play song → .play davido funds",
+  description: "Download and send audio from YouTube",
   async execute(sock, msg, args) {
-    const query = args.join(" ");
-    if (!query) return sock.sendMessage(msg.key.remoteJid, { text: "Usage: `.play davido funds`" }, { quoted: msg });
+    if (args.length === 0) {
+      const usageText = `
+┏━━🎵 *PLAY MUSIC* ━━┓
 
-    const chat = msg.key.remoteJid;
+Please provide a song name!
+
+📌 *Usage:* .play <song name>
+Example: .play faded
+         .play perfect ed sheeran
+
+┗━━━━━━━━━━━━━━━━┛
+      `.trim();
+
+      return await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: usageText },
+        { quoted: msg }
+      );
+    }
+
+    const query = args.join(" ");
+    const searchingText = `
+┏━━🎵 *SEARCHING MUSIC* ━━┓
+
+🎧 Looking for: *${query}*
+⏳ This may take 10–30 seconds...
+
+┗━━━━━━━━━━━━━━━━┛
+    `.trim();
+
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: searchingText },
+      { quoted: msg }
+    );
 
     try {
-      await sock.sendMessage(chat, { text: `Searching "${query}"...` }, { quoted: msg });
+      // Step 1: Search YouTube using free API
+      const searchRes = await fetch(`https://youtube-search-results-api.herokuapp.com/search?q=${encodeURIComponent(query)}`);
+      const searchData = await searchRes.json();
 
-      const result = await ytSearch(query);
-      const video = result.videos[0];
-      if (!video) return sock.sendMessage(chat, { text: "Song not found!" }, { quoted: msg });
+      if (!searchData.items || searchData.items.length === 0) {
+        throw new Error("No results");
+      }
 
-      await sock.sendMessage(chat, {
-        image: { url: video.thumbnail },
-        caption: `*\( {video.title}*\nDuration: \){video.duration.timestamp || "LIVE"}\n\nSending audio...`
-      }, { quoted: msg });
+      const video = searchData.items[0]; // Top result
+      const title = video.title || "Unknown Song";
+      const author = video.author?.name || "Unknown Artist";
+      const duration = video.duration || "Unknown";
+      const thumbnail = video.thumbnails?.[0]?.url || "";
 
-      // THIS LINE 100% KILLS 410 ERROR
-      const audioUrl = await ytdl.getURL(video.url, {
-        quality: "highestaudio",
-        filter: "audioonly"
+      // Step 2: Get direct audio download link (using another free service)
+      const downloadRes = await fetch(`https://api.yanzbotz.my.id/api/ytdl?query=${encodeURIComponent(video.url)}`);
+      const downloadData = await downloadRes.json();
+
+      let audioUrl = "";
+      if (downloadData.result && downloadData.result.audio) {
+        // Try different qualities
+        audioUrl = downloadData.result.audio["128kbps"] || 
+                   downloadData.result.audio["192kbps"] || 
+                   Object.values(downloadData.result.audio)[0];
+      }
+
+      if (!audioUrl) throw new Error("Audio link not found");
+
+      const successText = `
+┏━━🎵 *NOW PLAYING* ━━┓
+
+🎶 *Title:* ${title}
+👤 *Artist:* ${author}
+⏱ *Duration:* ${duration}
+
+⬇️ Sending audio...
+
+┗━━━━━━━━━━━━━━━━┛
+      `.trim();
+
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: successText },
+        { quoted: msg }
+      );
+
+      // Send audio with thumbnail and details
+      await sock.sendMessage(msg.key.remoteJid, {
+        audio: { url: audioUrl },
+        mimetype: "audio/mpeg",
+        fileName: `${title}.mp3`,
+        ptt: false, // false = normal audio, true = voice note
+        waveform: [0, 50, 10, 80, 20, 70, 30, 60], // fake waveform
+        contextInfo: {
+          externalAdReply: {
+            title: title,
+            body: `Played by NexOra Bot`,
+            thumbnailUrl: thumbnail,
+            mediaType: 2,
+            mediaUrl: video.url,
+          }
+        }
       });
 
-      const response = await fetch(audioUrl);
-      if (!response.ok) throw new Error("Failed to fetch audio");
+    } catch (error) {
+      const errorText = `
+┏━━❌ *PLAY ERROR* ━━┓
 
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = Buffer.from(arrayBuffer);
+😕 Could not find or download audio for:
+🎵 *"${query}"*
 
-      await sock.sendMessage(chat, {
-        audio: audioBuffer,
-        mimetype: "audio/mpeg",
-        fileName: `${video.title.replace(/[^a-zA-Z0-9\s]/g, "").slice(0, 80)}.mp3`,
-        ptt: false
-      }, { quoted: msg });
+Tips:
+• Try full song name + artist
+• Check spelling
+• Some songs may be blocked
 
-      await sock.sendMessage(chat, { text: "Enjoy the jam!" }, { quoted: msg });
+Try again or use .yt for video!
 
-    } catch (err) {
-      console.error("Play error:", err.message);
-      await sock.sendMessage(chat, { text: "Failed (age-restricted or blocked in your region)." }, { quoted: msg });
+┗━━━━━━━━━━━━━━━━┛
+      `.trim();
+
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: errorText },
+        { quoted: msg }
+      );
     }
-  }
+  },
 };
