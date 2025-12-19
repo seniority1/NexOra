@@ -1,49 +1,114 @@
-import fetch from "node-fetch";
-
 export default {
   name: "lyrics",
-  description: "Get song lyrics, artist name, and album art",
+  description: "Fetch song lyrics",
   async execute(sock, msg, args) {
-    const from = msg.key.remoteJid;
-    const query = args.join(" ");
+    if (args.length < 2) {
+      const usageText = `
+┏━━🎤 *LYRICS FINDER* ━━┓
 
-    if (!query) {
-      await sock.sendMessage(from, { text: "🎵 Usage: *.lyrics <song name>*" }, { quoted: msg });
-      return;
+Please provide artist and song title!
+
+📌 *Usage:* .lyrics <artist> <song title>
+Example: .lyrics alan walker faded
+       or: .lyrics ed sheeran perfect
+
+┗━━━━━━━━━━━━━━━━┛
+      `.trim();
+
+      return await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: usageText },
+        { quoted: msg }
+      );
     }
 
+    const artist = args[0];
+    const title = args.slice(1).join(" ");
+    const searchingText = `
+┏━━🎤 *SEARCHING LYRICS* ━━┓
+
+🎵 *Song:* ${title}
+🎤 *Artist:* ${artist}
+⏳ Fetching lyrics...
+
+┗━━━━━━━━━━━━━━━━┛
+    `.trim();
+
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: searchingText },
+      { quoted: msg }
+    );
+
     try {
-      // 🎧 Search on Genius
-      const search = await fetch(`https://some-random-api.com/lyrics?title=${encodeURIComponent(query)}`);
-      const data = await search.json();
+      const response = await fetch(
+        `https://api.lyrics.ovh/v1/\( {encodeURIComponent(artist)}/ \){encodeURIComponent(title)}`
+      );
+      const data = await response.json();
 
-      if (!data || !data.lyrics) {
-        await sock.sendMessage(from, { text: `❌ No lyrics found for *${query}*.` }, { quoted: msg });
-        return;
+      if (!data.lyrics || data.lyrics.trim() === "") {
+        throw new Error("No lyrics found");
       }
 
-      const title = data.title || query;
-      const author = data.author || "Unknown artist";
-      const thumbnail = data.thumbnail?.genius || null;
-      const lyrics = data.lyrics.length > 4000
-        ? data.lyrics.slice(0, 4000) + "\n\n📜 Lyrics too long, truncated..."
-        : data.lyrics;
+      const lyrics = data.lyrics.trim();
 
-      // 🖼️ If thumbnail found, send as image with caption
-      if (thumbnail) {
-        await sock.sendMessage(from, {
-          image: { url: thumbnail },
-          caption: `🎶 *${title}* by *${author}*\n\n${lyrics}`,
-        }, { quoted: msg });
+      // Split long lyrics to avoid WhatsApp message limit (~4096 chars)
+      const maxLength = 3000;
+      if (lyrics.length > maxLength) {
+        const parts = lyrics.match(new RegExp(`.{1,\( {maxLength}}(\\n| \))`, "g"));
+        for (let i = 0; i < parts.length; i++) {
+          const partText = `
+┏━━🎤 *LYRICS* (\( {i + 1}/ \){parts.length}) ━━┓
+
+🎵 *\( {title}* - \){artist}
+
+${parts[i]}
+
+┗━━━━━━━━━━━━━━━━┛
+          `.trim();
+
+          await sock.sendMessage(msg.key.remoteJid, { text: partText }, { quoted: msg });
+        }
       } else {
-        await sock.sendMessage(from, {
-          text: `🎶 *${title}* by *${author}*\n\n${lyrics}`,
-        }, { quoted: msg });
-      }
+        const fullText = `
+┏━━🎤 *LYRICS* ━━┓
 
-    } catch (err) {
-      console.error("❌ Lyrics command error:", err);
-      await sock.sendMessage(from, { text: "⚠️ Couldn't fetch lyrics. Try again later." }, { quoted: msg });
+🎵 *Song:* ${title}
+🎤 *Artist:* ${artist}
+
+${lyrics}
+
+Powered by Lyrics.ovh
+
+┗━━━━━━━━━━━━━━━━┛
+        `.trim();
+
+        await sock.sendMessage(
+          msg.key.remoteJid,
+          { text: fullText },
+          { quoted: msg }
+        );
+      }
+    } catch (error) {
+      const errorText = `
+┏━━❌ *LYRICS NOT FOUND* ━━┓
+
+😕 No lyrics found for:
+🎵 *\( {title}* by * \){artist}*
+
+Tips:
+• Check spelling
+• Try different artist name
+• Some songs may not be available
+
+┗━━━━━━━━━━━━━━━━┛
+      `.trim();
+
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: errorText },
+        { quoted: msg }
+      );
     }
   },
 };
