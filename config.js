@@ -1,4 +1,4 @@
 export default {
-  ownerNumber: "2349160291884", // pairing number, edit to yours
-  owners: ["2349160291884@s.whatsapp.net"],
+  ownerNumber: "2348079613400", // pairing number, edit to yours
+  owners: ["2348079613400@s.whatsapp.net"],
 };
