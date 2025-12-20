@@ -1,4 +1,4 @@
-// index.js
+// bot.js
 import fs from "fs";
 import path from "path";
 import makeWASocket, {
@@ -115,58 +115,19 @@ async function startBot() {
   sock.ev.on("creds.update", saveCreds);
 
   // 📱 Pairing
-  // ---------------------------
-// 📱 Pairing (Dynamic)
-// ---------------------------
-async function requestPairing(sock, phoneNumber) {
-  const authDir = `./auth/${phoneNumber}`;
-  if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
-
-  const { state, saveCreds } = await useMultiFileAuthState(authDir);
-
-  sock.ev.on("creds.update", saveCreds);
-
   if (!state.creds.registered) {
+    const phoneNumber = process.env.WHATSAPP_NUMBER || config.ownerNumber;
     console.log(`⏳ Requesting pairing code for ${phoneNumber}...`);
-    try {
-      const code = await sock.requestPairingCode(phoneNumber.trim());
-      console.log(`✅ Pairing code for ${phoneNumber}: ${code}`);
-      return code;
-    } catch (err) {
-      console.error("⚠️ Pairing code error:", err?.message || err);
-      throw err;
-    }
+    setTimeout(async () => {
+      try {
+        const code = await sock.requestPairingCode(phoneNumber.trim());
+        console.log(`✅ Pairing code: ${code}`);
+        console.log("➡️ Link from WhatsApp → Linked Devices → Link with phone number");
+      } catch (err) {
+        console.error("⚠️ Pairing code error:", err?.message || err);
+      }
+    }, 3000);
   }
-}
-
-// Example usage: dynamically from backend API
-// Suppose your backend sends POST { phone: "234XXXXXXXXX" }
-import express from "express";
-const app = express();
-app.use(express.json());
-
-app.post("/pair", async (req, res) => {
-  const phoneNumber = req.body.phone;
-  if (!phoneNumber) return res.status(400).json({ error: "Phone number required" });
-
-  try {
-    const { version } = await fetchLatestBaileysVersion();
-    const sock = makeWASocket({
-      logger: pino({ level: "silent" }),
-      printQRInTerminal: false,
-      auth: { creds: {}, keys: makeCacheableSignalKeyStore({}) }, // temporary for pairing
-      version,
-      browser: ["Ubuntu", "Chrome", "22.04.4"],
-    });
-
-    const code = await requestPairing(sock, phoneNumber);
-    res.json({ pairingCode: code });
-  } catch (err) {
-    res.status(500).json({ error: err.message || err });
-  }
-});
-
-app.listen(3000, () => console.log("Backend API listening on port 3000"));
 
   // 🔄 Connection
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
