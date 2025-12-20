@@ -28,6 +28,8 @@
     "qrcode": "^1.5.3",
     "youtube-yts": "^2.0.0",
     "yt-search": "^2.13.1",
+    "string-similarity": "^4.0.4",
+     "apkpure-scraper": "^2.1.6",
     "ytdl-core": "^4.11.5",
     "tesseract.js": "^5.1.0"
   },
