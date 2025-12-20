@@ -1,112 +1,112 @@
+import apk from "apkpure-scraper";
+import axios from "axios";
+import similarity from "string-similarity";
+import fs from "fs";
+import path from "path";
+
 export default {
   name: "apk",
-  description: "Search and download APK from APKPure",
+  description: "Search, fetch and download APK files",
   async execute(sock, msg, args) {
-    if (args.length === 0) {
-      const usageText = `
-┏━━🔍 *APK SEARCH* ━━┓
-
-Please provide an app name!
-
-📌 *Usage:* .apk <app name>
-Example: .apk acode
-
-┗━━━━━━━━━━━━━━━━┛
-      `.trim();
-
-      return await sock.sendMessage(
+    if (!args.length) {
+      return sock.sendMessage(
         msg.key.remoteJid,
-        { text: usageText },
+        { text: "📦 Usage: apk <app name>\nExample: apk whatsapp" },
         { quoted: msg }
       );
     }
 
     const query = args.join(" ");
-    const searchingText = `
-┏━━🔍 *SEARCHING APK* ━━┓
-
-🔎 Looking for: *${query}*
-⏳ Please wait a moment...
-
-┗━━━━━━━━━━━━━━━━┛
-    `.trim();
+    const chatId = msg.key.remoteJid;
 
     await sock.sendMessage(
-      msg.key.remoteJid,
-      { text: searchingText },
+      chatId,
+      { text: "🔍 Searching APK, please wait..." },
       { quoted: msg }
     );
 
     try {
-      // Fetch search results from APKPure
-      const searchRes = await fetch(`https://apkpure.com/search?q=${encodeURIComponent(query)}`);
-      const searchHtml = await searchRes.text();
+      // 🔎 SEARCH
+      const results = await apk.search(query);
 
-      // Simple regex to find the first app detail page link (usually the top result)
-      const detailMatch = searchHtml.match(/<a class="dd" href="(\/[^"]+\/download\?[^"]+)"/);
-      if (!detailMatch) throw new Error("No results found");
-
-      const detailPath = detailMatch[1];
-      const detailUrl = `https://apkpure.com${detailPath}`;
-
-      // Get download page and extract direct APK URL
-      const downloadRes = await fetch(detailUrl);
-      const downloadHtml = await downloadRes.text();
-
-      const apkMatch = downloadHtml.match(/<a[^>]+id="download_link"[^>]+href="([^"]+)"/);
-      if (!apkMatch) throw new Error("Download link not found");
-
-      const apkUrl = apkMatch[1];
-      if (!apkUrl.startsWith("http")) {
-        // Some links are relative
-        apkUrl = "https://apkpure.com" + apkUrl;
+      if (!results.length) {
+        return sock.sendMessage(
+          chatId,
+          { text: "❌ No APK found." },
+          { quoted: msg }
+        );
       }
 
-      const appName = query.charAt(0).toUpperCase() + query.slice(1);
+      // 🧠 AUTO-CORRECT APP NAME
+      const names = results.map(r => r.name);
+      const bestMatch = similarity.findBestMatch(query, names).bestMatch.target;
+      const app = results.find(r => r.name === bestMatch);
 
-      const successText = `
-┏━━📱 *APK DOWNLOADER* ━━┓
+      // 📦 APP INFO
+      const details = await apk.app(app.id);
 
-✅ *App:* ${appName}
-⬇️ Sending APK file...
+      const infoText = `
+┏━━📦 *APK FOUND* ━━┓
 
-⚠️ Install at your own risk!
+📛 *Name:* ${details.name}
+📦 *Package:* ${details.package}
+🧩 *Version:* ${details.version}
+📱 *Android:* ${details.androidVersion}
+💾 *Size:* ${details.size}
+⭐ *Rating:* ${details.rating}
 
-┗━━━━━━━━━━━━━━━━┛
-      `.trim();
+⬇️ Downloading APK...
+┗━━━━━━━━━━━━━━━━━━━━┛
+      `;
 
+      // 🖼 THUMBNAIL PREVIEW
       await sock.sendMessage(
-        msg.key.remoteJid,
-        { text: successText },
+        chatId,
+        {
+          image: { url: details.icon },
+          caption: infoText.trim(),
+        },
         { quoted: msg }
       );
 
-      // Send the APK as a document
-      await sock.sendMessage(msg.key.remoteJid, {
-        document: { url: apkUrl },
-        mimetype: "application/vnd.android.package-archive",
-        fileName: `${appName}.apk`,
-        caption: `${appName} APK from APKPure`,
+      // ⬇️ DOWNLOAD APK
+      const download = await apk.download(details.package);
+      const filePath = path.join("./tmp", `${details.package}.apk`);
+
+      if (!fs.existsSync("./tmp")) fs.mkdirSync("./tmp");
+
+      const response = await axios({
+        method: "GET",
+        url: download.url,
+        responseType: "stream",
       });
 
-    } catch (error) {
-      const errorText = `
-┏━━❌ *APK ERROR* ━━┓
+      const writer = fs.createWriteStream(filePath);
+      response.data.pipe(writer);
 
-😕 Could not find or download "${query}"
+      await new Promise((resolve, reject) => {
+        writer.on("finish", resolve);
+        writer.on("error", reject);
+      });
 
-Possible reasons:
-• App not available on APKPure
-• Temporary site issue
-
-Try another name or check spelling!
-
-┗━━━━━━━━━━━━━━━━┛
-      `.trim();
-
+      // 📤 SEND APK FILE
       await sock.sendMessage(
-        msg.key.remoteJid,
-        { text: errorText },
+        chatId,
+        {
+          document: fs.readFileSync(filePath),
+          mimetype: "application/vnd.android.package-archive",
+          fileName: `${details.name}.apk`,
+        },
+        { quoted: msg }
+      );
+
+      fs.unlinkSync(filePath); // cleanup
+
+    } catch (err) {
+      console.error(err);
+      await sock.sendMessage(
+        chatId,
+        { text: "❌ Failed to fetch APK. Try another app name." },
         { quoted: msg }
       );
     }
